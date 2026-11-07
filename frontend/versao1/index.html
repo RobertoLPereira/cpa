@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDV Caixa - Reforma Tributária & IBPT</title>
+    <!-- Tailwind CSS para design limpo e responsivo -->
+    <script src="estilo.css"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1e3a8a">
+</head>
+<body class="bg-gray-100 font-sans min-h-screen flex flex-col">
+
+    <!-- Cabeçalho Principal -->
+    <header class="bg-blue-900 text-white shadow-md p-4">
+    <div class="container mx-auto flex justify-between items-center">
+        <h1 class="text-xl font-bold tracking-wider">🛒 SOFTWARE HOUSE - PDV REFORMA TRIBUTÁRIA</h1>
+        <div class="flex items-center gap-4">
+            <nav class="space-x-4">
+                <button onclick="alternarAba('caixa')" id="btn-caixa" class="px-4 py-2 rounded bg-blue-700 font-semibold shadow">Frente de Caixa</button>
+                <button onclick="alternarAba('gerente')" id="btn-gerente" class="px-4 py-2 rounded text-gray-300 hover:text-white font-semibold">Gerente / Retaguarda</button>
+            </nav>
+            <!-- Ícone de Help (?) -->
+            <button onclick="abrirModalAjuda()" class="bg-blue-800 hover:bg-blue-700 text-white font-bold w-10 h-10 rounded-full border border-blue-600 flex items-center justify-center text-lg shadow transition" title="Arquitetura do Sistema">
+                ❓
+            </button>
+        </div>
+    </div>
+</header>
+
+    <!-- Área de Conteúdo -->
+    <main class="container mx-auto flex-1 p-4 flex gap-4">
+
+        <!-- ABA 1: FRENTE DE CAIXA (PDV) -->
+        <section id="aba-caixa" class="w-full flex gap-4">
+            <!-- Coluna Esquerda: Registro de Itens -->
+            <div class="w-3/5 bg-white p-6 rounded-lg shadow flex flex-col justify-between">
+                <div>
+                    <h2 class="text-lg font-bold text-gray-700 mb-4 border-b pb-2">REGISTRO DE MERCADORIAS</h2>
+                    <div class="flex gap-2 mb-4">
+                        <input type="text" id="input-scanner" placeholder="Escaneie ou digite o código do item (Ex: 2000100125006, 7891991011259)" class="flex-1 p-3 border rounded text-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button onclick="registrarItemCarrinho()" class="bg-green-600 hover:bg-green-700 text-white px-6 font-bold rounded text-lg">Bipar</button>
+                    </div>
+                    
+                    <!-- Monitor do Item Atual -->
+                    <div id="monitor-item" class="bg-blue-50 border-l-4 border-blue-600 p-4 mb-4 rounded hidden">
+                        <p class="text-xs font-bold text-blue-800 tracking-wider">ÚLTIMO PRODUTO BIIPADO</p>
+                        <p id="monitor-nome" class="text-2xl font-black text-gray-800">---</p>
+                        <p id="monitor-detalhe" class="text-sm text-gray-600">---</p>
+                    </div>
+
+                    <!-- Lista de Compras -->
+                    <div class="border rounded overflow-hidden">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-gray-200 text-gray-700 text-sm">
+                                    <th class="p-2 pl-4">Item</th>
+                                    <th class="p-2">Descrição</th>
+                                    <th class="p-2 text-center">Qtd/Peso</th>
+                                    <th class="p-2 text-right pr-4">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-carrinho" class="text-gray-600 font-mono text-sm divide-y">
+                                <!-- Inserido via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Botões de Fechamento -->
+                <div class="mt-4 flex gap-2">
+                    <button onclick="cancelarCupomAtual()" class="w-1/3 bg-red-600 hover:bg-red-700 text-white p-3 font-bold rounded shadow">Cancelar Cupom</button>
+                    <button onclick="finalizarFaturamentoCupom()" class="w-2/3 bg-blue-700 hover:bg-blue-800 text-white p-3 font-bold rounded shadow text-xl tracking-wide">Finalizar NFC-e</button>
+                </div>
+            </div>
+
+            <!-- Coluna Direita: Cupom e Valores Acumulados -->
+            <div class="w-2/5 flex flex-col gap-4">
+                <!-- Visor de Totais -->
+                <div class="bg-gray-900 text-green-400 p-6 rounded-lg shadow text-right font-mono">
+                    <p class="text-xs text-gray-400 tracking-widest">TOTAL DO CUPOM</p>
+                    <p class="text-5xl font-black" id="visor-total">R$ 0,00</p>
+                </div>
+
+                <!-- Painel IVA Dual Realtime -->
+                <div class="bg-white p-4 rounded-lg shadow">
+                    <h3 class="text-sm font-bold text-gray-700 mb-2 border-b pb-1">PARTILHA REFORMA (IVA DUAL)</h3>
+                    <div class="grid grid-cols-2 gap-2 text-sm font-mono">
+                        <div class="bg-gray-50 p-2 rounded">
+                            <span class="text-xs text-gray-500 block">IBS (Estado/Mun):</span>
+                            <strong id="resumo-ibs" class="text-lg text-gray-800">R$ 0,00</strong>
+                        </div>
+                        <div class="bg-gray-50 p-2 rounded">
+                            <span class="text-xs text-gray-500 block">CBS (União):</span>
+                            <strong id="resumo-cbs" class="text-lg text-gray-800">R$ 0,00</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Espelho da NFC-e Impressa -->
+                <div class="bg-yellow-50 border border-yellow-200 p-4 rounded-lg shadow flex-1 font-mono text-xs text-gray-800 flex flex-col justify-between overflow-y-auto">
+                    <div id="cupom-texto">
+                        <p class="text-center font-bold text-sm">*** ESPELHO DA NFC-e (TÉRMICA) ***</p>
+                        <p class="text-center mb-4">MERCADINHO DA REFORMA LTDA</p>
+                        <div id="cupom-linhas" class="space-y-1">
+                            <p class="text-center text-gray-400">Nenhum item faturado até o momento.</p>
+                        </div>
+                    </div>
+                    <div id="cupom-rodape" class="border-t border-dashed border-gray-400 pt-2 mt-4 hidden">
+                        <!-- Inserido dinamicamente -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ABA 2: GERENTE / RETAGUARDA (AUDITORIA) -->
+        <section id="aba-gerente" class="w-full bg-white p-6 rounded-lg shadow hidden space-y-6">
+            <div class="flex justify-between items-center border-b pb-4">
+                <h2 class="text-2xl font-bold text-gray-800">Painel do Gerente - Administração Fiscal</h2>
+                <div class="space-x-2">
+                    <button onclick="executarCargaMockMySQL()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 font-semibold rounded shadow">1. Carga Dump JSON (MySQL)</button>
+                    <button onclick="executarSincronizacaoMatriz()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 font-semibold rounded shadow">2. Sincronizar Tabelas (NCM)</button>
+                    <button onclick="carregarRelatorioInconsistencias()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 font-semibold rounded shadow">3. Auditar Inconsistências</button>
+                </div>
+            </div>
+
+            <!-- Relatório de Falhas -->
+            <div>
+                <h3 class="text-lg font-bold text-red-700 mb-2 flex items-center gap-2">⚠️ PRODUTOS REJEITADOS OU INCONSISTENTES</h3>
+                <div class="border rounded-lg overflow-hidden shadow-sm">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-red-50 text-red-800 font-bold text-sm border-b">
+                                <th class="p-3">ID</th>
+                                <th class="p-3">Produto</th>
+                                <th class="p-3">NCM</th>
+                                <th class="p-3">Falha Identificada</th>
+                                <th class="p-3">Detalhamento Técnico</th>
+                            </tr>
+                        </table>
+                        <div id="container-auditoria" class="divide-y text-sm text-gray-600 font-mono">
+                            <p class="p-4 text-center text-gray-400">Clique em "Auditar Inconsistências" para executar a varredura ativa.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+    <!-- SUBSTITUA O BLOCO DO MODAL ANTIGO POR ESTE COMPLETO -->
+<div id="modal-ajuda" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white w-full max-w-4xl rounded-xl shadow-2xl flex flex-col max-h-[90vh]">
+        <!-- Cabeçalho do Modal -->
+        <div class="bg-blue-900 text-white p-4 rounded-t-xl flex justify-between items-center">
+            <h3 class="text-lg font-bold tracking-wide">📐 ARQUITETURA DA SOLUÇÃO & CRONOGRAMA EC 132/2023</h3>
+            <button onclick="fecharModalAjuda()" class="text-white hover:text-gray-300 font-black text-xl px-2">&times;</button>
+        </div>
+        
+        <!-- Conteúdo Técnico Rolável -->
+        <div class="p-6 overflow-y-auto space-y-6 text-sm text-gray-600 leading-relaxed">
+            
+            <!-- Sessão Nova: Cronograma da Reforma Tributária -->
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h4 class="font-bold text-blue-950 text-base border-b border-blue-300 pb-1 mb-3">📊 CRONOGRAMA DE TRANSIÇÃO DO IVA DUAL (EC 132/2023)</h4>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono text-xs text-gray-800">
+                    <!-- Datas de Validade / Extinção -->
+                    <div class="bg-white p-3 rounded shadow-sm border">
+                        <p class="font-bold text-blue-900 mb-2 border-b pb-1">📅 Datas de Validade dos Tributos</p>
+                        <ul class="space-y-1">
+                            <li>• <strong>PIS:</strong> Válido até <span class="text-red-600 font-bold">2026-12</span></li>
+                            <li>• <strong>COFINS:</strong> Válido até <span class="text-red-600 font-bold">2026-12</span></li>
+                            <li>• <strong>IPI:</strong> Válido até <span class="text-red-600 font-bold">2026-12</span></li>
+                            <li>• <strong>ICMS:</strong> Válido até <span class="text-red-600 font-bold">2032-12</span></li>
+                            <li>• <strong>ISS:</strong> Válido até <span class="text-red-600 font-bold">2032-12</span></li>
+                            <li>• <strong>CBS / IBS / IS:</strong> Vigência permanente (<span class="text-green-600 font-bold">3099-12</span>)</li>
+                        </ul>
+                    </div>
+
+                    <!-- Alíquotas de Transição de Teste (2026-2028) -->
+                    <div class="bg-white p-3 rounded shadow-sm border">
+                        <p class="font-bold text-blue-900 mb-2 border-b pb-1">⚡ Alíquotas de Referência (Fase de Teste)</p>
+                        <ul class="space-y-1">
+                            <li class="font-bold text-indigo-900">• Alíquota Estadual - IBS:</li>
+                            <li class="pl-4">- 0,1% | Início: 2026-01 | Fim: 2026-12</li>
+                            <li class="pl-4">- 0,05% | Início: 2027-01 | Fim: 2028-12</li>
+                            <li class="font-bold text-indigo-900 mt-1">• Alíquota Municipal - IBS:</li>
+                            <li class="pl-4">- 0,05% | Início: 2027-01 | Fim: 2028-12</li>
+                            <li class="text-gray-500 mt-1">• <strong>IPI:</strong> Sem alteração regulamentar nesta fase</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Escada de Redução Gradual de ICMS / ISS -->
+                <div class="bg-white p-3 rounded shadow-sm border mt-3 font-mono text-xs text-gray-800">
+                    <p class="font-bold text-blue-900 mb-2 border-b pb-1">📉 Escada de Redução Proporcional (ICMS & ISS)</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <ul class="space-y-0.5">
+                            <li class="font-bold text-amber-800">• Redução Gradual do ICMS:</li>
+                            <li>- <strong>Redução 90%:</strong> 2029-01 até 2029-12</li>
+                            <li>- <strong>Redução 80%:</strong> 2030-01 até 2030-12</li>
+                            <li>- <strong>Redução 70%:</strong> 2031-01 até 2031-12</li>
+                            <li>- <strong>Redução 60%:</strong> 2032-01 até 2032-12</li>
+                        </ul>
+                        <ul class="space-y-0.5">
+                            <li class="font-bold text-amber-800">• Redução Gradual do ISS:</li>
+                            <li>- <strong>Redução 90%:</strong> 2029-01 até 2029-12</li>
+                            <li>- <strong>Redução 80%:</strong> 2030-01 até 2030-12</li>
+                            <li>- <strong>Redução 70%:</strong> 2031-01 até 2031-12</li>
+                            <li>- <strong>Redução 60%:</strong> 2032-01 até 2032-12</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <!-- 📊 TABELAS DE TRANSIÇÃO E DIRETRIZES DA REFORMA (INCLUSÃO) -->
+<div class="row mt-4">
+    <!-- Coluna da Matriz De-Para -->
+    <div class="col-md-12 mb-4">
+        <div class="card shadow-sm border-primary">
+             <p class="font-bold text-blue-900 mb-2 border-b pb-1">📉 Novas Regras a Serem Consideradas (CST & cClassTrib)</p>
+            <div class="card-header bg-primary text-white d-flex align-items-center">
+                <i class="bi bi-grid-3x3-gap-fill me-2"></i>
+                <h5 class="mb-0">Matriz de Mapeamento De-Para: CST Antigo vs. cClassTrib 2026</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped mb-0 align-middle small">
+                        <thead class="table-dark text-nowrap">
+                            <tr>
+                                <th>CST Antigo</th>
+                                <th>Descrição CST</th>
+                                <th>cClassTrib 2026</th>
+                                <th>Descrição cClassTrib</th>
+                                <th>Alíquota (IBS+CBS)</th>
+                                <th>Observação / Aplicação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><strong>00</strong></td><td>Tributação Normal</td><td><code class="text-danger fw-bold">0000</code></td><td>Tributação Padrão</td><td>26,5% <span class="badge bg-warning text-dark">teste: 1%</span></td><td>Varejo geral, eletrônicos</td></tr>
+                            <tr><td><strong>10</strong></td><td>Tributada com ST</td><td><code class="text-danger fw-bold">0000</code></td><td>Tributação Padrão</td><td>26,5% <span class="badge bg-warning text-dark">teste: 1%</span></td><td>Aplicável somente estados que mantêm ST</td></tr>
+                            <tr><td><strong>20</strong></td><td>Não Tributada</td><td><code class="text-danger fw-bold">1010</code></td><td>Cesta Básica Nacional</td><td><span class="badge bg-success">0%</span></td><td>Itens listados na Lei 214/25</td></tr>
+                            <tr><td><strong>30</strong></td><td>Isenta</td><td><code class="text-danger fw-bold">1010</code></td><td>Cesta Básica Nacional</td><td><span class="badge bg-success">0%</span></td><td>Produtos isentos por lei</td></tr>
+                            <tr><td><strong>40</strong></td><td>Venda de Ativo Imobilizado</td><td><code class="text-danger fw-bold">9999</code></td><td>Outros/Regime Diferenciado</td><td><span class="text-muted">Variável</span></td><td>Verificar regra específica</td></tr>
+                            <tr><td><strong>41</strong></td><td>Devolução de Venda Sujeita ao ICMS</td><td><code class="text-danger fw-bold">0000</code></td><td>Tributação Padrão</td><td>26,5% <span class="badge bg-warning text-dark">teste: 1%</span></td><td>Devolução normal</td></tr>
+                            <tr><td><strong>50</strong></td><td>Operação com Isenção do ICMS</td><td><code class="text-danger fw-bold">1010</code></td><td>Cesta Básica Nacional</td><td><span class="badge bg-success">0%</span></td><td>Itens com isenção específica</td></tr>
+                            <tr><td><strong>51</strong></td><td>Operação Não-Tributada pela Legislação</td><td><code class="text-danger fw-bold">1010</code></td><td>Cesta Básica Nacional</td><td><span class="badge bg-success">0%</span></td><td>Isenção por lei estadual/federal</td></tr>
+                            <tr><td><strong>60</strong></td><td>Crédito do ICMS a Aproveitamento</td><td><code class="text-danger fw-bold">0000</code></td><td>Tributação Padrão</td><td>26,5% <span class="badge bg-warning text-dark">teste: 1%</span></td><td>Compra de insumo</td></tr>
+                            <tr><td><strong>70</strong></td><td>Transmissão de Bens Incorporais</td><td><code class="text-danger fw-bold">9999</code></td><td>Outros/Regime Diferenciado</td><td><span class="text-muted">Variável</span></td><td>Serviços intangíveis</td></tr>
+                            <tr><td><strong>90</strong></td><td>Outras Operações</td><td><code class="text-danger fw-bold">9999</code></td><td>Outros/Regime Diferenciado</td><td><span class="text-muted">Variável</span></td><td>Consulte regra específica</td></tr>
+                            <tr><td><strong>00-MED</strong></td><td>Medicamentos (CST 00)</td><td><code class="text-danger fw-bold">2020</code></td><td>Medicamentos</td><td><span class="badge bg-info text-dark">Redução 60%</span></td><td>Farmácias, distribuidoras</td></tr>
+                            <tr><td><strong>20-MED</strong></td><td>Medicamentos Isentos</td><td><code class="text-danger fw-bold">2020</code></td><td>Medicamentos</td><td><span class="badge bg-success">0%</span></td><td>Medicamentos especiais</td></tr>
+                            <tr><td><strong>00-EDU</strong></td><td>Educação (CST 00)</td><td><code class="text-danger fw-bold">3030</code></td><td>Serviços de Educação</td><td><span class="badge bg-info text-dark">Redução 60%</span></td><td>Escolas, cursos, faculdades</td></tr>
+                            <tr><td><strong>00-PROF</strong></td><td>Profissionais Liberais</td><td><code class="text-danger fw-bold">4040</code></td><td>Profissionais Liberais</td><td><span class="badge bg-secondary">Trimestral</span></td><td>Médicos, advogados, contadores</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Coluna de Códigos Estruturais -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100 shadow-sm border-secondary">
+            <div class="card-header bg-secondary text-white">
+                <h6 class="mb-0"><i class="bi bi-tags-fill me-2"></i>Dicionário Global cClassTrib</h6>
+            </div>
+            <div class="card-body py-2">
+                <ul class="list-group list-group-flush small">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">Tributação Padrão <span class="badge bg-dark">0000</span></li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">Cesta Básica Nacional <span class="badge bg-dark">1010</span></li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">Medicamentos <span class="badge bg-dark">2020</span></li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">Serviços de Educação <span class="badge bg-dark">3030</span></li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">Profissionais Liberais <span class="badge bg-dark">4040</span></li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">Operações Financeiras <span class="badge bg-dark">5050</span></li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">Combustíveis e Energia <span class="badge bg-dark">6060</span></li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">Bebidas Alcoólicas <span class="badge bg-dark">7070</span></li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">Tabaco <span class="badge bg-dark">8080</span></li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">Outros/Regime Diferenciado <span class="badge bg-dark">9999</span></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Coluna de Diretrizes Técnicas / Regras de Negócio -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100 shadow-sm border-warning">
+            <div class="card-header bg-warning text-dark fw-bold">
+                <h6 class="mb-0"><i class="bi bi-shield-fill-check me-2"></i>Orientações e Regras de Validação</h6>
+            </div>
+            <div class="card-body small">
+                <h6 class="fw-bold mb-1 text-primary">1. Cadastro de Itens & Schema</h6>
+                <p class="text-muted mb-3">O campo <code class="text-dark bg-light px-1">cClassTrib</code> deve ser mandatório. O sistema deve validar ativamente a compatibilidade NCM x Classificação antes de gerar o XML da venda.</p>
+                
+                <h6 class="fw-bold mb-1 text-primary">2. Alíquota de Teste (Fase 2026)</h6>
+                <p class="text-muted mb-3">As operações simuladas no PDV devem utilizar a alíquota total temporária de <strong>1%</strong> (sendo <strong>0,9% para a CBS</strong> e <strong>0,1% para o IBS</strong>). A alíquota padrão estimada de 26,5% deve ficar em modo latente.</p>
+                
+                <h6 class="fw-bold mb-1 text-primary">3. Validação XML (Nota Técnica 2025.002)</h6>
+                <div class="alert alert-danger p-2 mb-0 border-0 rounded">
+                    <ul class="mb-0 ps-3 text-danger-dark">
+                        <li><strong>Rejeição 530:</strong> Tag <code>cClassTrib</code> ausente no nó de tributação do item.</li>
+                        <li><strong>Rejeição 999:</strong> Incompatibilidade cadastral ou de regras detectada.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+            <!-- Dados Anteriores da PoC permanecem ordenados abaixo -->
+            <div>
+                <h4 class="font-bold text-blue-900 text-base border-b pb-1 mb-2">1. Engenharia do Projeto</h4>
+                <p>Esta Prova de Conceito (PoC) foi projetada sob o princípio de <strong>automação fiscal baseada em dados puros (Zero Hardcode)</strong>. O sistema não utiliza condicionais estáticas para decidir impostos. Toda a inteligência tributária foi delegada para relacionamentos matemáticos nativos executados dentro do banco de dados local.</p>
+            </div>
+            <div>
+                <h4 class="font-bold text-blue-900 text-base border-b pb-1 mb-2">2. Fontes de Dados Externas</h4>
+                <ul class="list-disc pl-5 space-y-1 font-mono text-xs">
+                    <li><strong>Planilha IVA Dual (SEFAZ):</strong> Fornece a matriz de flags booleanas de blocos fiscais (ex: <code class="bg-gray-100 p-0.5 rounded">ind_gIBSCBSMono</code>) vinculadas a cada CST/cClassTrib da LC 214/2025.</li>
+                    <li><strong>Tabela de NCM do Fisco:</strong> Associa o NCM de 8 dígitos do produto ao código estrutural do <code class="bg-gray-100 p-0.5 rounded">cClassTrib</code>.</li>
+                    <li><strong>Arquivo Bruto do IBPT:</strong> Fornece as alíquotas estimadas de carga para a Lei da Transparência (12.741/12) vinculadas estritamente por NCM.</li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-bold text-blue-900 text-base border-b pb-1 mb-2">3. Extensão da Tabela Mestre</h4>
+                <div class="bg-gray-900 text-green-400 p-3 rounded font-mono text-xs mt-2 overflow-x-auto">
+                    ALTER TABLE produtos ADD COLUMN cst_iva_dual TEXT;<br>
+                    ALTER TABLE produtos ADD COLUMN cclass_trib TEXT;<br>
+                    ALTER TABLE produtos ADD COLUMN ind_monofasico INTEGER DEFAULT 0;<br>
+                    ALTER TABLE produtos ADD COLUMN ibpt_fed REAL DEFAULT 0.0;<br>
+                    ALTER TABLE produtos ADD COLUMN ibpt_est REAL DEFAULT 0.0;
+                </div>
+            </div>
+        </div>
+        
+        <!-- Rodapé do Modal -->
+        <div class="bg-gray-100 p-4 rounded-b-xl flex justify-end">
+            <button onclick="fecharModalAjuda()" class="bg-blue-900 hover:bg-blue-800 text-white font-bold px-6 py-2 rounded shadow">Fechar Painel</button>
+        </div>
+    </div>
+</div>
+
+    <!-- Scripts do PWA -->
+    <script src="app.js"></script>
+    <script>
+        // Registra o Service Worker para habilitar o PWA Offline
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(() => console.log("[PWA] Service Worker Homologado com Sucesso."));
+        }
+    </script>
+</body>
+</html>

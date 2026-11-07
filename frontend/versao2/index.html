@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDV Caixa - Reforma Tributária & IBPT</title>
+    <style>
+        /* VARIÁVEIS DE DESIGN NATIVAS */
+        :root {
+            --bg-principal: #0f172a;
+            --bg-cards: #020617;
+            --bg-inputs: #1e293b;
+            --border-color: #334155;
+            --text-main: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-green: #10b981;
+            --accent-sky: #0ea5e9;
+            --accent-amber: #f59e0b;
+            --accent-rose: #ef4444;
+        }
+
+        /* RESET FISCAL E TIPOGRAFIA */
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+        body, html { height: 100%; background-color: var(--bg-principal); color: var(--text-main); overflow: hidden; user-select: none; }
+        .font-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+        .coupon-font { font-family: 'Courier New', Courier, monospace; }
+        .hidden { display: none !important; }
+
+        /* CABEÇALHO */
+        /* CABEÇALHO CORRIGIDO */
+            .main-header { 
+                background-color: var(--bg-cards); 
+                border-bottom: 1px solid var(--border-color); 
+                padding: 8px 16px; 
+                display: flex; 
+                justify-content: space-between; 
+                align-items: center; /* Antes estava 'items: center' */
+                height: 50px; 
+            }
+        .header-title-box { display: flex; align-items: center; gap: 12px; }
+        .badge-status { background-color: var(--accent-green); color: #020617; font-size: 11px; font-weight: bold; padding: 2px 8px; border-radius: 4px; }
+        .header-meta { display: flex; gap: 16px; font-size: 12px; color: var(--text-secondary); }
+
+        /* INTERFACE EXPANSÍVEL (GRID DINÂMICO) */
+        .pdv-container { display: grid; grid-template-columns: 6fr 3fr 3fr; gap: 16px; padding: 16px; height: calc(100vh - 95px); overflow: hidden; transition: grid-template-columns 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .pdv-container.manager-hidden { grid-template-columns: 8fr 4fr 0fr; gap: 16px 0px; }
+        .column-panel { display: flex; flex-direction: column; gap: 16px; overflow: hidden; height: 100%; transition: opacity 0.2s; }
+        .pdv-container.manager-hidden .manager-column { opacity: 0; pointer-events: none; }
+
+        /* COMPONENTES DE OPERAÇÃO 
+        .scanner-card { background-color: var(--bg-cards); border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; display: flex; flex-direction: column; gap: 6px; }
+        .scanner-label { font-size: 11px; font-weight: bold; text-transform: uppercase; color: var(--text-secondary); display: flex; justify-content: space-between; }
+        .scanner-input { width: 100%; background-color: var(--bg-inputs); border: 1px solid var(--border-color); border-radius: 4px; padding: 8px 12px; font-size: 14px; color: var(--text-main); outline: none; }
+        .scanner-input:focus { border-color: var(--accent-green); }
+        */
+        /* COMPONENTES DE OPERAÇÃO - CORES SUAVES E NOVOS CAMPOS */
+        .scanner-card { 
+            background-color: #111827; /* Tom grafite escuro mais suave que o preto total */
+            border: 1px solid #374151; 
+            padding: 16px; 
+            border-radius: 8px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 12px; 
+        }
+        .scanner-label { 
+            font-size: 11px; 
+            font-weight: bold; 
+            text-transform: uppercase; 
+            color: #9ca3af; 
+            display: flex; 
+            justify-content: space-between; 
+        }
+        .scanner-input { 
+            width: 100%; 
+            background-color: #1f2937; 
+            border: 1px solid #4b5563; 
+            border-radius: 4px; 
+            padding: 8px 12px; 
+            font-size: 14px; 
+            color: var(--text-main); 
+            outline: none; 
+            transition: border-color 0.15s;
+        }
+        .scanner-input:focus { 
+            border-color: var(--accent-sky); 
+            box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.2);
+        }
+
+        /* Grid para os campos rápidos de Qtd e Preço abaixo do Scanner */
+        .quick-fields-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .quick-field-box {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .quick-field-box label {
+            font-size: 10px;
+            font-weight: bold;
+            color: #9ca3af;
+            text-transform: uppercase;
+        }
+        .quick-field-input {
+            width: 100%;
+            background-color: #1f2937;
+            border: 1px solid #4b5563;
+            border-radius: 4px;
+            padding: 6px 10px;
+            font-size: 13px;
+            color: #f3f4f6;
+            font-family: 'JetBrains Mono', monospace;
+            text-align: right;
+            outline: none;
+        }
+        .quick-field-input:focus {
+            border-color: var(--accent-amber);
+        }
+
+        .last-item-card { background-color: var(--bg-cards); border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; min-height: 58px; }
+        .table-wrapper { flex: 1; background-color: var(--bg-cards); border: 1px solid var(--border-color); border-radius: 8px; overflow-y: auto; }
+        
+        /* GRADE/TABELA COMERICAL */
+        .items-table { width: 100%; border-collapse: collapse; text-align: left; }
+        .items-table th { background-color: #010409; font-size: 11px; font-weight: bold; color: var(--text-secondary); padding: 10px; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 10; }
+        .items-table td { padding: 8px 10px; font-size: 12px; border-bottom: 1px solid #1e293b; }
+        .sub-text-fiscal { font-size: 10px; color: var(--text-secondary); margin-top: 2px; }
+    </style>
+</head>
+<body>
+    <!-- CABEÇALHO SUPERIOR -->
+    <header class="main-header">
+        <div class="header-title-box">
+            <span class="badge-status">CAIXA LIVRE</span>
+            <!-- TÍTULO CORRIGIDO -->
+            <span style="font-size: 13px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">
+                PDV REFORMA TRIBUTÁRIA
+            </span>
+        </div>
+        <div class="header-meta">
+            <button id="toggle-manager-btn" style="background-color: var(--bg-inputs); border: 1px solid var(--border-color); color: var(--text-main); font-size: 11px; font-weight: bold; padding: 4px 10px; border-radius: 4px; cursor: pointer; transition: background 0.2s;">
+                PAINEL GERENTE: VISÍVEL
+            </button>
+            <div style="align-self: center;">Regime: <span style="color: var(--accent-amber); font-weight: 500;">Transição IVA Dual (LC 214/2025)</span></div>
+        </div>
+    </header>
+
+    <!-- CONTAINER PRINCIPAL DO PDV -->
+    <main class="pdv-container" id="pdv-main-layout">
+        
+        <!-- COLUNA 1: OPERAÇÃO E MERCADORIAS -->
+        <section class="column-panel">
+            <!-- Entrada de dados [F9] -->
+            <!-- Entrada de dados expandida com Qtd e Preço Manual -->
+        <div class="scanner-card">
+            <div class="scanner-label" id="scanner-container-header">
+                <span>[F9] Código de barras / scanner</span>
+                <!-- Adicionado o ID status-scanner para manipulação dinâmica -->
+                <span id="status-scanner" style="color: var(--accent-sky); font-family: monospace;">aguardando bip...</span>
+            </div>
+
+            <input type="text" id="input-scanner" class="scanner-input font-mono" placeholder="Bipe o produto ou digite o código..." autofocus>
+
+            <!-- Novos Campos de Apoio ao Operador -->
+            <div class="quick-fields-grid">
+                <div class="quick-field-box">
+                    <label for="input-quantidade"><b style="color: var(--accent-amber);">[F2]</b> Quantidade Lançamento</label>
+                    <input type="text" id="input-quantidade" class="quick-field-input" value="1,000">
+                </div>
+                <div class="quick-field-box">
+                    <label for="input-preco-manual"><b style="color: var(--accent-amber);">[F1]</b> Preço Praticado (Se R$ 0)</label>
+                    <input type="text" id="input-preco-manual" class="quick-field-input" value="0,00" placeholder="0,00">
+                </div>
+            </div>
+        </div>
+
+
+            <!-- Último Item Processado (Monitor) -->
+            <div class="last-item-card" id="monitor-item">
+                <div class="hidden" id="monitor-item-content" style="width: 100%; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%;">
+                        <p style="font-size: 10px; font-weight: bold; color: var(--text-secondary); text-transform: uppercase;">Último produto registrado</p>
+                        <p id="monitor-nome" style="font-size: 13px; font-weight: 600; color: #f1f5f9; margin-top: 1px;"></p>
+                    </div>
+                    <div style="text-align: right;">
+                        <p id="monitor-detalhe" class="font-mono" style="font-size: 12px; font-weight: bold; color: var(--accent-sky);"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabela Comercial -->
+            <div class="table-wrapper">
+                <table class="items-table font-mono">
+                    <thead>
+                        <tr>
+                            <th style="text-align: center; width: 50px;">Item</th>
+                            <th>Descrição / Dados Fiscais</th>
+                            <th style="text-align: center; width: 90px;">Qtd</th>
+                            <th style="text-align: right; width: 110px;">Total Item</th>
+                        </tr>
+                    </thead>
+                    <!-- ID mapeado para a injeção innerHTML do seu JS -->
+                    <tbody id="tabela-carrinho"></tbody>
+                </table>
+            </div>
+        </section>
+        <!-- COLUNA 2: ESPELHO TÉRMICO DO CUPOM REAL (ESTRUTURA FIXA COM SCROLL DE ITENS) -->
+        <section class="column-panel" style="background-color: #fefcf3; color: #1e293b; border-radius: 8px; border: 1px solid #e2d9af; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; height: 100%;">
+            
+            <!-- Cabeçalho Fixo do Papel -->
+            <div style="background-color: #f5efa6; padding: 6px 12px; font-size: 10px; font-weight: bold; color: #78350f; text-transform: uppercase; border-bottom: 1px solid #e2d9af; display: flex; justify-content: space-between; flex-shrink: 0;">
+                <span>Espelho NFC-e (Térmica)</span>
+                <span class="font-mono">EC 132/2023</span>
+            </div>
+                <!-- Área Interna Total do Papel Bobina (Fontes Reduzidas de 11px para 10px) -->
+            <div class="coupon-font" style="flex: 1; padding: 10px; font-size: 10px; line-height: 1.25; display: flex; flex-direction: column; overflow: hidden;">
+                
+                <!-- FIXO: Cabeçalho do Estabelecimento -->
+                <div style="text-align: center; border-bottom: 1px dashed #78350f; padding-bottom: 4px; margin-bottom: 4px; flex-shrink: 0;">
+                    <p style="font-weight: bold; font-size: 11px;">MERCADINHO DA REFORMA LTDA</p>
+                    <p style="font-size: 9px; color: #475569;">CNPJ: 00.000.000/0001-00</p>
+                    <p style="font-size: 9px; color: #475569;">----------------------------------------</p>
+                </div>
+
+                <!-- DINÂMICO COM SCROLL: Lista de Produtos (Maximizada para exibir mais itens) -->
+                <div id="cupom-linhas" style="flex: 1; overflow-y: auto; padding-right: 2px; display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px;">
+                    <div style="text-align: center; color: #64748b; padding-top: 24px; font-style: italic;" id="cupom-vazio-msg">
+                        Nenhum item faturado ate o momento.
+                    </div>
+                </div>
+
+                <!-- FIXO: Rodapé de Fechamento Compacto -->
+                <div id="cupom-rodape" class="hidden" style="flex-shrink: 0; border-top: 1px dashed #78350f; padding-top: 4px; margin-top: auto; background-color: #fefcf3; z-index: 5;">
+                    <!-- O JS injetará o bloco abaixo reformulado com foco no TOTAL em negrito -->
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- ESTILOS DO PAINEL DIREITO -->
+        <style>
+            .totalizador-card { background-color: var(--bg-cards); border: 1px solid var(--border-color); padding: 16px; border-radius: 8px; display: flex; flex-direction: column; gap: 12px; }
+            .total-title { font-size: 11px; font-weight: bold; text-transform: uppercase; color: var(--text-secondary); }
+            .total-value { font-size: 26px; font-weight: 900; color: var(--accent-green); line-height: 1; }
+            .split-iva-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; border-top: 1px solid var(--border-color); padding-top: 8px; }
+            .split-iva-box { background-color: rgba(30,41,59,0.4); padding: 6px 10px; border-radius: 4px; border: 1px solid #1e293b; font-size: 11px; }
+            
+            .admin-panel { flex: 1; background-color: var(--bg-cards); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+            .admin-title { font-size: 11px; font-weight: bold; text-transform: uppercase; color: var(--text-secondary); border-bottom: 1px solid var(--border-color); padding-bottom: 6px; }
+            .btn-stack { display: flex; flex-direction: column; gap: 8px; }
+            .btn-fiscal { width: 100%; text-align: left; background-color: var(--bg-inputs); border: 1px solid var(--border-color); color: var(--text-main); font-size: 12px; font-weight: 500; padding: 8px 12px; border-radius: 4px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.15s; }
+            .btn-fiscal:hover { background-color: #334155; }
+            .btn-audit-active { background-color: #0c4a6e; border-color: #0369a1; color: #e0f2fe; font-weight: bold; }
+            .btn-audit-active:hover { background-color: #075985; }
+            
+            .rejection-box { flex: 1; border: 1px solid var(--border-color); background-color: rgba(1,4,9,0.3); border-radius: 6px; padding: 8px; display: flex; flex-direction: column; overflow: hidden; }
+            
+            .pdv-footer { background-color: var(--bg-cards); border-top: 1px solid var(--border-color); padding: 8px 16px; text-align: center; height: 45px; }
+            .shortcuts-bar { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; align-items: center; height: 100%; }
+            .key-badge { background-color: var(--bg-inputs); border: 1px solid var(--border-color); font-size: 11px; font-family: monospace; color: #cbd5e1; padding: 3px 8px; border-radius: 4px; }
+            .key-badge b { margin-right: 4px; }
+        </style>
+
+        <!-- COLUNA 3: TRIBUTAÇÃO E PAINEL ADMINISTRATIVO (GERENTE) -->
+        <section class="column-panel manager-column" id="manager-panel-column">
+            <!-- Grandes Visores de Totais Mapeados por ID -->
+            <div class="totalizador-card">
+                <div>
+                    <span class="total-title">Total do Cupom</span>
+                    <div class="total-value font-mono" id="visor-total">R$ 0,00</div>
+                </div>
+                <div class="split-iva-grid font-mono">
+                    <div class="split-iva-box">
+                        <div style="color: var(--text-secondary); font-size: 9px; text-transform: uppercase;">IBS (Est/Mun)</div>
+                        <div id="resumo-ibs" style="font-weight: bold; margin-top: 2px; color: var(--text-main);">R$ 0,00</div>
+                    </div>
+                    <div class="split-iva-box">
+                        <div style="color: var(--text-secondary); font-size: 9px; text-transform: uppercase;">CBS (União)</div>
+                        <div id="resumo-cbs" style="font-weight: bold; margin-top: 2px; color: var(--text-main);">R$ 0,00</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Administração Fiscal / Relatórios do Gerente -->
+            <div class="admin-panel">
+                <h3 class="admin-title">Administração Fiscal Retaguarda</h3>
+                <div class="btn-stack">
+                    <!-- Funções mapeadas para disparar as chamadas assíncronas originais -->
+                    <button class="btn-fiscal" onclick="executarCargaMockMySQL()"><span>1. Carga Dump JSON</span><span style="color: var(--text-secondary)">►</span></button>
+                    <button class="btn-fiscal" onclick="executarSincronizacaoMatriz()"><span>2. Sincronizar Tabelas</span><span style="color: var(--text-secondary)">►</span></button>
+                    <button class="btn-fiscal btn-audit-active" onclick="carregarRelatorioInconsistencias()"><span>3. Auditar Inconsistências</span><span>🔍</span></button>
+                </div>
+                
+                <div class="rejection-box">
+                    <p style="font-size: 10px; font-weight: bold; color: var(--accent-amber); text-transform: uppercase; margin-bottom: 6px;">⚠️ Varredura de Inconsistências Mestre</p>
+                    <!-- ID mapeado para renderização do relatório via JS -->
+                    <div id="container-auditoria" style="flex: 1; overflow-y: auto; font-size: 11px; color: var(--text-secondary); padding: 8px 4px; line-height: 1.4;">
+                        Clique em "Auditar" para executar o cruzamento vivo de schemas na base física.
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- RODAPÉ FIXO DE ACESSO RÁPIDO (PROTEGIDO DE COLISÕES) -->
+    <footer class="pdv-footer">
+        <div class="shortcuts-bar">
+            <span class="key-badge"><b style="color: var(--accent-amber);">F4</b> CPF Nota</span>
+            <!-- CORREÇÃO DO GATILHO FISCAL NO RODAPÉ -->
+            <span class="key-badge" style="cursor:pointer;" onclick="cancelarItemEspecifico()">
+                <b style="color: var(--accent-rose);">F5</b> Cancelar Item
+            </span>
+            <span class="key-badge" style="cursor:pointer;" onclick="cancelarCupomAtual()"><b style="color: var(--accent-rose);">F6</b> Canc. Venda</span>
+            <span class="key-badge" style="cursor:pointer;" onclick="finalizarFaturamentoCupom()"><b style="color: var(--accent-green);">F8</b> Finalizar Venda</span>
+            <span class="key-badge"><b style="color: var(--accent-sky);">F9</b> Focar Scanner</span>
+            <span class="key-badge"><b style="color: #64748b;">F10</b> Sair</span>
+        </div>
+    </footer>
+
+    <!-- SCRIPT NATIVO DE ACOPLAMENTO E CONTROLE DE VISIBILIDADE -->
+    <script>
+        document.getElementById('toggle-manager-btn').addEventListener('click', function() {
+            const layout = document.getElementById('pdv-main-layout');
+            const column = document.getElementById('manager-panel-column');
+            
+            if (layout.classList.contains('manager-hidden')) {
+                layout.classList.remove('manager-hidden');
+                column.classList.remove('hidden');
+                this.innerText = 'PAINEL GERENTE: VISÍVEL';
+                this.style.backgroundColor = 'var(--bg-inputs)';
+            } else {
+                layout.classList.add('manager-hidden');
+                column.classList.add('hidden');
+                this.innerText = 'PAINEL GERENTE: OCULTO';
+                this.style.backgroundColor = '#064e3b'; // Tom verde discreto indicando modo focado
+            }
+        });
+
+        // Correção de amostragem do elemento monitor do último item (Garante a compatibilidade com a função renderizarCarrinhoECupom)
+        const observer = new MutationObserver(() => {
+            const monitor = document.getElementById('monitor-item');
+            const content = document.getElementById('monitor-item-content');
+            if (monitor && content) {
+                if (!monitor.classList.contains('hidden')) {
+                    content.classList.remove('hidden');
+                } else {
+                    content.classList.add('hidden');
+                }
+            }
+        });
+        observer.observe(document.getElementById('monitor-item'), { attributes: true, attributeFilter: ['class'] });
+    </script>
+    <!-- Scripts do PWA -->
+    <script src="app.js"></script>
+    <script>
+        // Registra o Service Worker para habilitar o PWA Offline
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(() => console.log("[PWA] Service Worker Homologado com Sucesso."));
+        }
+    </script>
+</body>
+</html>

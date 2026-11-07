@@ -1,0 +1,9 @@
+
+SEFAZ Rio Grande do Sul (RS) - Homologação
+Serviço	Versão	URL	
+NfeInutilizacao	4.00	https://nfe-homologacao.sefazrs.rs.gov.br/ws/nfeinutilizacao/nfeinutilizacao4.asmx
+NfeConsultaProtocolo	4.00	https://nfe-homologacao.sefazrs.rs.gov.br/ws/NfeConsulta/NfeConsulta4.asmx
+NfeStatusServico	4.00	https://nfe-homologacao.sefazrs.rs.gov.br/ws/NfeStatusServico/NfeStatusServico4.asmx
+RecepcaoEvento	4.00	https://nfe-homologacao.sefazrs.rs.gov.br/ws/recepcaoevento/recepcaoevento4.asmx
+NFeAutorizacao	4.00	https://nfe-homologacao.sefazrs.rs.gov.br/ws/NfeAutorizacao/NFeAutorizacao4.asmx
+NFeRetAutorizacao	4.00	https://nfe-homologacao.sefazrs.rs.gov.br/ws/NfeRetAutorizacao/NFeRetAutorizacao4.asmx
