@@ -6,7 +6,7 @@ from sqlmodel import Field, Relationship, SQLModel
 from sqlalchemy.orm import relationship
 
 # 1. TABELA: LOJA (Refletindo o dump real)
-class Loja(SQLModel, table=True):
+class Loja(SQLModel, table=False):
     __tablename__: str = "loja"
 
     id_loja: int = Field(primary_key=True)
@@ -23,7 +23,7 @@ class Loja(SQLModel, table=True):
     codigo_municipio: Optional[str] = Field(default=None, max_length=7)
 
 # 3. TABELA: VENDA
-class Venda(SQLModel, table=True):
+class Venda(SQLModel, table=False):
     __tablename__: str = "venda"
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -37,7 +37,7 @@ class Venda(SQLModel, table=True):
     status_nfce: Optional[str] = Field(default=None, max_length=20)
 
 # 4. TABELA: VENDA_ITEM
-class VendaItem(SQLModel, table=True):
+class VendaItem(SQLModel, table=False):
     __tablename__: str = "venda_item"
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -66,7 +66,7 @@ class VendaItem(SQLModel, table=True):
     cbs_valor: Optional[Decimal] = Field(default=None, sa_column=Column(Numeric(15, 4)))
     ibs_valor_total: Optional[Decimal] = Field(default=None, sa_column=Column(Numeric(15, 4)))
 
-class MovimentacaoPerdasEstoque(SQLModel, table=True):
+class MovimentacaoPerdasEstoque(SQLModel, table=False):
     __tablename__: str = "movimentacao_perdas_estoque"
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -79,7 +79,7 @@ class MovimentacaoPerdasEstoque(SQLModel, table=True):
         sa_column=Column(DateTime, server_default=text("CURRENT_TIMESTAMP"), nullable=False)
     )
 
-class Caixa(SQLModel, table=True):
+class Caixa(SQLModel, table=False):
     __tablename__: str = "caixa"
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -106,7 +106,7 @@ class Caixa(SQLModel, table=True):
     )
 
 
-class CaixaMovimento(SQLModel, table=True):
+class CaixaMovimento(SQLModel, table=False):
     __tablename__: str = "caixa_movimento"
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -120,7 +120,7 @@ class CaixaMovimento(SQLModel, table=True):
 
     caixa: Caixa = Relationship(back_populates="movimentacoes")
 
-class OaasControleSync(SQLModel, table=True):
+class OaasControleSync(SQLModel, table=False):
     __tablename__: str = "oaas_controle_sync"
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -135,7 +135,7 @@ class OaasControleSync(SQLModel, table=True):
         )
     )
 # Certifique-se de que este bloco exato está colado no final do seu models.py
-class AuditoriaProdutosFalhas(SQLModel, table=True):
+class AuditoriaProdutosFalhas(SQLModel, table=False):
     __tablename__: str = "auditoria_produtos_falhas"
     
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -152,7 +152,7 @@ from sqlalchemy import Column, Numeric, String, DateTime, text
 from typing import Optional, List
 from sqlmodel import Field, Relationship, SQLModel
 
-class ProdutosTributos(SQLModel, table=True):
+class ProdutosTributos(SQLModel, table=False):
     __tablename__: str = "produtos_tributos"
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -185,7 +185,7 @@ class ProdutosTributos(SQLModel, table=True):
 
 
 # DENTRO DA SUA CLASSE 'Produtos' ATUAL, INJETE ESTA LINHA:
-class Produtos(SQLModel, table=True):
+class Produtos(SQLModel, table=False):
     __tablename__: str = "produtos"    
     
     id_produto: str = Field(primary_key=True, max_length=20)  # Chave primária original (VARCHAR)

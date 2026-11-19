@@ -1,0 +1,342 @@
+@app.post("/api/v1/caixa/calcular-cupom")
+def calcular_e_finalizar_cupom_caixa(
+    carrinho: CarrinhoInput, 
+    background_tasks: BackgroundTasks, 
+    session: Session = Depends(get_session)
+):
+    itens_aprovados = []
+    itens_bloqueados = []
+    subtotal_produtos = Decimal("0.00")
+    total_ibs = Decimal("0.00")
+    total_cbs = Decimal("0.00")
+    total_ibpt_fed = Decimal("0.00")
+    total_ibpt_est = Decimal("0.00")
+    
+    for item in carrinho.itens_carrinho:
+        res = calcular_item_cupom(
+            session=session,
+            codigo_lido=item.codigo,
+            qtd_caixa=item.quantidade,
+            preco_caixa=item.preco_contingencia
+        )
+        
+        if res["status"] in ["BLOQUEADO", "REJEITADO"]:
+            itens_bloqueados.append(res)
+        else:
+            res["xml_string_sefaz"] = generar_string_xml_ibscbs(res)
+            itens_aprovados.append(res)
+            
+            subtotal_produtos += res["vProd"]
+            total_ibs += res["IBSCBS"]["vIBS"]
+            total_cbs += res["IBSCBS"]["vCBS"]
+            total_ibpt_fed += res["ibpt"]["vFed"]
+            total_ibpt_est += res["ibpt"]["vEst"]
+            
+            if res.get("forcou_contingencia"):
+                background_tasks.add_task(atualizar_preco_produto_background, res["id_produto"], item.preco_contingencia)
+            
+    if itens_aprovados:
+        dar_baixa_estoque_lote(session, itens_aprovados)
+        
+        # 1. Cria a instância de cabeçalho da Venda no banco (Mapeada na sessão)
+        nova_venda = Venda(
+            subtotal=Decimal(subtotal_produtos),
+            total=Decimal(subtotal_produtos),
+            status="APROVADO",
+            data_venda=datetime.now(timezone.utc)
+        )
+        session.add(nova_venda)
+        session.flush() # Descarrega para o MySQL gerar o ID auto-incremental imediatamente
+
+        # 2. Injeta o Log CDC de sincronização pendente para o robô
+        log_sync = OaasControleSync(
+            tabela_afetada="venda",
+            registro_id=str(nova_venda.id),
+            status="P"
+        )
+        session.add(log_sync)
+        session.commit()
+        
+        # 3. Dispara o Robô Python em Background Tasks de forma assíncrona
+        background_tasks.add_task(processar_fila_sincronizacao_background)
+        
+    return {
+        "resumo": {
+            "vProd": subtotal_produtos,
+            "vIBS_Total": total_ibs,
+            "vCBS_Total": total_cbs,
+            "vNF": subtotal_produtos,
+            "ibpt_total_fed": total_ibpt_fed,
+            "ibpt_total_est": total_ibpt_est,
+            "vTotTrib": total_ibpt_fed + total_ibpt_est
+        },
+        "itens_aprovados": itens_aprovados,
+        "itens_bloqueados": itens_bloqueados
+    }
+def processar_fila_sincronizacao_background() -> None:
+    """
+    Robô Python executado de forma assíncrona. Varre a tabela 'oaas_controle_sync'
+    em busca de modificações pendentes ('P') e despacha para o servidor central.
+    """
+    with Session(engine) as session:
+        # 1. Coleta os registros pendentes de sincronização
+        pendencias = session.exec(
+            select(OaasControleSync).where(OaasControleSync.status == "P").limit(50)
+        ).all()
+
+        if not pendencias:
+            return
+
+        # Inicializa cliente HTTP para bater na Matriz
+        with httpx.Client(timeout=10.0) as client:
+            for item in pendencias:
+                payload = {}
+                
+                # 2. Busca e monta o payload específico baseado na tabela afetada
+                if item.tabela_afetada == "produtos":
+                    produto = session.exec(
+                        select(Produtos).where(Produtos.id_produto == item.registro_id)
+                    ).first()
+                    if produto:
+                        payload = {
+                            "tipo_registro": "PRODUTO",
+                            "id_produto": produto.id_produto,
+                            "nome": produto.nome_produto,
+                            "preco_venda": float(produto.preco_venda),
+                            "estoque_atual": float(produto.estoque_atual)
+                        }
+                        
+                elif item.tabela_afetada == "venda":
+                    venda = session.exec(
+                        select(Venda).where(Venda.id == int(item.registro_id))
+                    ).first()
+                    if venda:
+                        payload = {
+                            "tipo_registro": "VENDA",
+                            "id_venda_local": venda.id,
+                            "numero_cupom": venda.numero,
+                            "total": float(venda.total),
+                            "chave_acesso": venda.chave_acesso,
+                            "status": venda.status
+                        }
+
+                # 3. Envia os dados caso o registro local tenha sido localizado
+                if payload:
+                    try:
+                        resposta = client.post(MATRIZ_API_URL, json=payload)
+                        
+                        # Se a matriz aceitou o lote, marca como Sincronizado ('S')
+                        if resposta.status_code :
+                            item.status = "S"
+                            session.add(item)
+                    except httpx.RequestError as exc:
+                        print(f"ALERTA SYNC - Erro de conexão com a Matriz para o ID {item.id}: {exc}")
+                        # Mantém como 'P' para tentar na próxima rodada do robô
+                        continue
+            
+            # Confirma as atualizações de status em lote
+            session.commit()
+def calcular_item_cupom(
+    session: Session,
+    codigo_lido: str,
+    aliq_base_ibs: Decimal = Decimal("0.01"),
+    aliq_base_cbs: Decimal = Decimal("0.09"),
+    qtd_caixa: Optional[Decimal] = None,
+    preco_caixa: Optional[Decimal] = None
+) -> Dict[str, Any]:
+    """Calcula os totais e tributação (IBS/CBS) de um item do cupom usando SQLModel."""
+    eh_balanca, id_busca, valor_etiqueta = decompor_codigo_scanner(codigo_lido)
+    
+    # Busca o produto de forma orientada a objetos
+    #produto = session.exec(select(Produtos).where(Produtos.id_produto == id_busca)).first()
+    query = (
+        select(Produtos)
+        # 1. Faz o JOIN explícito utilizando a tabela produtos_tributos
+        .join(ProdutosTributos, Produtos.id_produto == ProdutosTributos.produto_id)
+        .where(Produtos.id_produto == id_busca)
+        .where(ProdutosTributos.uf == "RS")              # Filtro parametrizável da UF do PDV
+        .where(ProdutosTributos.tipo_operacao == "SAIDA") # Venda comercial
+        .where(ProdutosTributos.ativo == 1)               # Regra vigente
+        
+        # 2. Informa ao SQLAlchemy para aproveitar esse JOIN e não gerar subconsultas secundárias
+        .options(contains_eager(Produtos.tributos_lista))
+    )
+
+    produto = session.exec(query).first()
+    
+    if not produto:
+        return {
+            "status": "REJEITADO",
+            "id_produto": id_busca,
+            "motivo": f"Código {id_busca} não localizado na Tabela Mestre de Produtos."
+        }
+    # 2. Captura a primeira regra fiscal válida retornada pelo JOIN (produtos_tributos_1)
+    if produto.tributos_lista:
+        regra_fiscal = produto.tributos_lista[0]
+        
+        # Captura dinâmica do CFOP vindo diretamente do JOIN (produtos_tributos_1.cfop)
+        cfop_final = regra_fiscal.cfop if regra_fiscal.cfop else "5102"
+        
+        # Sobrescreve as alíquotas e CSTs para usar os dados da tabela produtos_tributos
+        cst = regra_fiscal.ibs_cbs_cst if regra_fiscal.ibs_cbs_cst is not None else "000"
+        cclass_trib = regra_fiscal.ibs_cbs_class_trib if regra_fiscal.ibs_cbs_class_trib is not None else "000001"
+        aliq_ibs_uf = regra_fiscal.ibs_uf_aliq_efetiva if regra_fiscal.ibs_uf_aliq_efetiva is not None else Decimal("0.0000")
+        aliq_cbs = regra_fiscal.cbs_aliq_efetiva if regra_fiscal.cbs_aliq_efetiva is not None else Decimal("0.0000")
+    else:
+        # Fallback de contingência caso o produto não possua amarração na tabela tributos
+        cfop_final = "5102"  # Venda padrão interna
+        cst = produto.cst_iva_dual if produto.cst_iva_dual is not None else "000"
+        cclass_trib = produto.cclass_trib if produto.cclass_trib is not None else "000001"
+        aliq_ibs_uf = produto.ibpt_fed if produto.ibpt_fed is not None else Decimal("0.0000")
+        aliq_cbs = Decimal("0.0000")
+
+    nome = produto.nome_produto
+    ncm = produto.ncm
+    cst = produto.cst_iva_dual if produto.cst_iva_dual is not None else "000"
+    cclass_trib = produto.cclass_trib if produto.cclass_trib is not None else "000001"
+    ind_mono = produto.ind_monofasico
+    
+    ibpt_fed = produto.ibpt_fed if produto.ibpt_fed is not None else Decimal("0.0000")
+    ibpt_est = produto.ibpt_est if produto.ibpt_est is not None else Decimal("0.0000")
+    preco_venda_cadastro = produto.preco_venda
+    
+    eh_contingencia_ativa = (qtd_caixa is not None and qtd_caixa > 0 and preco_caixa is not None and preco_caixa > 0)
+
+    # Bloqueia se o preço for zero E não houver preço de contingência enviado pelo caixa
+    if preco_venda_cadastro == Decimal("0.0000") and valor_etiqueta is None and not eh_contingencia_ativa:
+        return {
+            "status": "BLOQUEADO",
+            "id_produto": id_busca,
+            "nome_produto": nome,
+            "motivo": f"Produto '{nome}' está com PREÇO ZERADO no cadastro mestre."
+        }
+
+    # Definição matemática do valor final e quantidade baseada no canal de venda
+    if eh_contingencia_ativa:
+        preco_venda_final = preco_caixa
+        quantidade_peso = qtd_caixa
+        valor_final_item = (quantidade_peso * preco_venda_final).quantize(Decimal("1.00"))
+        unidade = "UN"
+    elif eh_balanca:
+        preco_venda_final = preco_venda_cadastro
+        if valor_etiqueta is not None:
+            valor_final_item = valor_etiqueta
+            quantidade_peso = (valor_final_item / preco_venda_final).quantize(Decimal("1.000")) if preco_venda_final > 0 else Decimal("0.000")
+        else:
+            quantidade_peso = Decimal("1.000")
+            valor_final_item = (preco_venda_final * quantidade_peso).quantize(Decimal("1.00"))
+        unidade = "KG"
+    else:
+        preco_venda_final = preco_venda_cadastro
+        valor_final_item = preco_venda_final.quantize(Decimal("1.00"))
+        quantidade_peso = Decimal("1.000")
+        unidade = "UN"
+
+    if ind_mono == 1:
+        aliq_efetiva_ibs = Decimal("0.00")
+        aliq_efetiva_cbs = Decimal("0.00")
+        regime_nome = "Monofásico (Saída com 0%)"
+    else:
+        aliq_efetiva_ibs = aliq_base_ibs
+        aliq_efetiva_cbs = aliq_base_cbs
+        regime_nome = "Tributação Regular Integral"
+
+    v_ibs = (valor_final_item * aliq_efetiva_ibs).quantize(Decimal("1.00"))
+    v_cbs = (valor_final_item * aliq_efetiva_cbs).quantize(Decimal("1.00"))
+    
+    v_ibpt_fed = (valor_final_item * (ibpt_fed / Decimal("100.00"))).quantize(Decimal("1.00"))
+    v_ibpt_est = (valor_final_item * (ibpt_est / Decimal("100.00"))).quantize(Decimal("1.00"))
+
+    return {
+        "status": "APROVADO",
+        "id_produto": id_busca,
+        "nome_produto": nome,
+        "ncm": ncm,
+        "uCom": unidade,
+        "qCom": quantidade_peso,
+        "vUnCom": preco_venda_final,
+        "vProd": valor_final_item,
+        "regime": regime_nome,
+        "forcou_contingencia": eh_contingencia_ativa,
+        "IBSCBS": {
+            "CST": str(cst).zfill(3),
+            "cClassTrib": str(cclass_trib).zfill(6),
+            "vBC": valor_final_item,
+            "vIBS": v_ibs,
+            "pIBS": aliq_efetiva_ibs,
+            "vCBS": v_cbs,
+            "pCBS": aliq_efetiva_cbs
+        },
+        "ibpt": {
+            "pFed": ibpt_fed,
+            "pEst": ibpt_est,
+            "vFed": v_ibpt_fed,
+            "vEst": v_ibpt_est
+        }
+    }
+def generar_string_xml_ibscbs(item: Dict[str, Any]) -> str:
+    """Transforma a memória de cálculo do item em uma string XML estruturada."""
+    fiscal = item["IBSCBS"]
+    ibscbs_xml = ET.Element("IBSCBS")
+    ET.SubElement(ibscbs_xml, "CST").text = str(fiscal["CST"])
+    ET.SubElement(ibscbs_xml, "cClassTrib").text = str(fiscal["cClassTrib"])
+    
+    g_ibscbs = ET.SubElement(ibscbs_xml, "gIBSCBS")
+    ET.SubElement(g_ibscbs, "vBC").text = f"{fiscal['vBC']:.2f}"
+    
+    g_ibs_uf = ET.SubElement(g_ibscbs, "gIBSUF")
+    ET.SubElement(g_ibs_uf, "pIBSUF").text = f"{(fiscal['pIBS'] * 100):.4f}"
+    ET.SubElement(g_ibs_uf, "vIBSUF").text = f"{fiscal['vIBS']:.2f}"
+    
+    g_ibs_mun = ET.SubElement(g_ibscbs, "gIBSMun")
+    ET.SubElement(g_ibs_mun, "pIBSMun").text = "0.0000"
+    ET.SubElement(g_ibs_mun, "vIBSMun").text = "0.00"
+    
+    ET.SubElement(g_ibscbs, "vIBS").text = f"{fiscal['vIBS']:.2f}"
+    
+    g_cbs = ET.SubElement(g_ibscbs, "gCBS")
+    ET.SubElement(g_cbs, "pCBS").text = f"{(fiscal['pCBS'] * 100):.4f}"
+    ET.SubElement(g_cbs, "vCBS").text = f"{fiscal['vCBS']:.2f}"
+    
+    rough_string = ET.tostring(ibscbs_xml, 'utf-8')
+    reparsed = minidom.parseString(rough_string)
+    xml_formatado = reparsed.toprettyxml(indent="    ")
+    
+    linhas = xml_formatado.split("\n")
+    if linhas[0].startswith("<?xml"):
+        linhas = linhas[1:]
+        
+    return "\n".join(linhas)
+def atualizar_preco_produto_background(id_produto: str, novo_preco: Decimal):
+    """Executa a atualização de contingência comercial em background."""
+    from backend.apis.mysql.orm.database import engine
+    with Session(engine) as session:
+        try:
+            produto = session.exec(select(Produtos).where(Produtos.id_produto == id_produto)).first()
+            if produto and (produto.preco_venda == Decimal("0.0000")):
+                produto.preco_venda = novo_preco
+                session.add(produto)
+                session.commit()
+        except Exception as e:
+            print(f"Falha ao atualizar preço em background: {e}")
+def dar_baixa_estoque_lote(session: Session, itens_venda: list) -> None:
+    """
+    Executa a baixa física de inventário na tabela mestre pós-venda.
+    Garante o cast de tipos para evitar conflitos entre Float e Decimal.
+    """
+    for item in itens_venda:
+        id_prod = item["id_produto"]
+        # Garante que a quantidade vendida seja Decimal
+        qtd_vendida = Decimal(str(item["qCom"]))
+        
+        produto = session.exec(select(Produtos).where(Produtos.id_produto == id_prod)).first()
+        if produto:
+            # Correção do Erro: Força o estoque atual do banco a virar Decimal antes da subtração
+            estoque_banco = Decimal(str(produto.estoque_atual or "0.0000"))
+            print(f"qtd vendida {qtd_vendida}")
+            # Executa a matemática limpa
+            produto.estoque_atual = estoque_banco - qtd_vendida
+            session.add(produto)
+            
+    session.commit()
+    

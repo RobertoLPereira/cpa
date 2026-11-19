@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     # 1. Configurações Globais do Aplicativo
     ENVIRONMENT: Literal["development", "production", "testing"] = "development"
-    DEBUG: bool = True
+    DEBUG: bool = False
 
     # 2. Infraestrutura (String de Conexão Validada)
     DATABASE_URL_MYSQL: str

@@ -3,6 +3,38 @@ const API_URL = "http://localhost:8000/api/v1";
 
 // Estado em memória do Carrinho de Compras atual do Caixa
 let carrinhoLocal = [];
+// Estado em memória do Carrinho, Cliente (F4) e Total do Cupom
+let cpfCnpjClienteAtual = null;
+let nomeClienteAtual = null;
+let totalCupomAtual = 0.00;
+
+// FUNÇÃO ATALHO F4: INFORMAR CPF OU CNPJ NA NOTA
+function informarCpfNota() {
+    const doc = prompt("Informe o CPF ou CNPJ do consumidor (apenas números):", cpfCnpjClienteAtual || "");
+    if (doc === null) return; // Cancelou o prompt
+
+    const docLimpo = doc.replace(/\D/g, "");
+    if (docLimpo === "") {
+        cpfCnpjClienteAtual = null;
+        nomeClienteAtual = null;
+        alert("CPF/CNPJ removido do cupom.");
+        return;
+    }
+
+    if (docLimpo.length !== 11 && docLimpo.length !== 14) {
+        alert("Documento inválido! Digite 11 dígitos para CPF ou 14 dígitos para CNPJ.");
+        return;
+    }
+
+    cpfCnpjClienteAtual = docLimpo;
+    if (docLimpo.length === 14) {
+        nomeClienteAtual = prompt("Informe a Razão Social / Nome do cliente (opcional):", nomeClienteAtual || "") || "CONSUMIDOR";
+    } else {
+        nomeClienteAtual = "CONSUMIDOR";
+    }
+
+    alert(`Cliente vinculado ao cupom: ${cpfCnpjClienteAtual}`);
+}
 
 // 1. GERENCIAMENTO DE ABAS DA INTERFACE
 function alternarAba(aba) {
@@ -97,7 +129,7 @@ function renderizarCarrinhoECupom(dados) {
     // 1. Renderiza os Itens Aprovados no Carrinho e no Cupom Térmico
     dados.itens_aprovados.forEach((item, index) => {
         const numItem = String(index + 1).zfill(3);
-        console.log(item);
+        //console.log(item);
         // Linha da Tabela Comercial do PDV
         tbody.innerHTML += `
             <tr class="hover:bg-gray-50 border-b">
@@ -168,10 +200,11 @@ function renderizarCarrinhoECupom(dados) {
     });
 
 
-    // 3. Atualiza os Visores de Totais Acumulados
-    document.getElementById("visor-total").innerText = `R$ ${dados.resumo.vNF.toFixed(2)}`;
+    // 3. Atualiza os Visores de Totais Acumulados    
     document.getElementById("resumo-ibs").innerText = `R$ ${dados.resumo.vIBS_Total.toFixed(2)}`;
     document.getElementById("resumo-cbs").innerText = `R$ ${dados.resumo.vCBS_Total.toFixed(2)}`;
+    totalCupomAtual = dados.resumo.vNF;
+    document.getElementById("visor-total").innerText = `R$ ${dados.resumo.vNF.toFixed(2)}`;
 
     // 4. Renderiza o Rodapé do Cupom (Matriz de Impostos do IBPT e IVA)
         // 4. Renderiza o Rodapé do Cupom (Matriz de Impostos do IBPT e IVA Compactada com Foco no Total)
@@ -257,59 +290,89 @@ function limparExibicaoTelas() {
     document.getElementById("visor-total").innerText = "R$ 0,00";
     document.getElementById("resumo-ibs").innerText = "R$ 0,00";
     document.getElementById("resumo-cbs").innerText = "R$ 0,00";
+    cpfCnpjClienteAtual = null;
+    nomeClienteAtual = null;
+    totalCupomAtual = 0.00;
 }
 
 // ATUALIZE A SUA FUNÇÃO EXISTENTE POR ESTA VERSÃO
 async function finalizarFaturamentoCupom() {
-    if (carrinhoLocal.length === 0) return;
-    
+    if (carrinhoLocal.length === 0) {
+        alert("O carrinho está vazio. Bipe ao menos um item antes de finalizar.");
+        return;
+    }
+
+    // Pergunta rápida de forma de pagamento (padrão 01 = Dinheiro)
+    const formaPag = prompt(
+        `Total a Pagar: R$ ${totalCupomAtual.toFixed(2)}\n\n` +
+        `Forma de Pagamento:\n` +
+        `01 - Dinheiro | 03 - Crédito | 04 - Débito | 17 - PIX`,
+        "01"
+    );
+
+    if (!formaPag) return; // Operador cancelou o fechamento
+
+    const payloadFechamento = {
+        terminal_id: "CAIXA-01",
+        modelo: cpfCnpjClienteAtual && cpfCnpjClienteAtual.length === 14 ? "55" : "65",
+        serie: "1",
+        cpf_cnpj_destinatario: cpfCnpjClienteAtual,
+        nome_destinatario: nomeClienteAtual,
+        itens_carrinho: carrinhoLocal,
+        pagamentos: [
+            {
+                tpag: formaPag.trim().padStart(2, "0"),
+                vpag: totalCupomAtual,
+                vtroco: 0.00
+            }
+        ]
+    };
+
     try {
-        // 1. Faz a chamada regular de faturamento e baixa de estoque
-        const respostaCalculo = await fetch(`${API_URL}/caixa/calcular-cupom`, {
+        const resposta = await fetch(`${API_URL}/caixa/finalizar-venda`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ codigos_scaneados: carrinhoLocal })
-        });
-        const dados = await respostaCalculo.json();
-        //println("retornou "+dados);
-        // 2. Prepara a lista simplificada de produtos mapeados com seus valores para enviar para a rota do XML
-        const produtosMapeados = dados.itens_aprovados.map(item => ({
-            id_produto: item.id_produto,
-            valor_venda: item.vProd
-        }));
-
-        const numNota = 40563; // Número hipotético simulado de cupom
-        //alert("nota ="+numNota+produtosMapeados);
-        // 3. Chamada assíncrona dedicada para obter a string XML completa do documento fiscal
-        const respostaXML = await fetch(`${API_URL}/caixa/gerar-xml-nota`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                numero_nota: numNota,
-                produtos: produtosMapeados
-            })
+            body: JSON.stringify(payloadFechamento)
         });
 
-        const xmlTexto = await respostaXML.text();
+        if (!resposta.ok) {
+            const erroApi = await resposta.json();
+            throw new Error(erroApi.detail || "Erro ao processar fechamento fiscal.");
+        }
 
-        // 4. MÁGICA DO PWA: Cria um link de download em memória (Blob) e aciona o download silencioso no navegador
-        const blob = new Blob([xmlTexto], { type: "application/xml" });
-        const urlDownload = window.URL.createObjectURL(blob);
-        const linkFalso = document.createElement("a");
-        
-        linkFalso.href = urlDownload;
-        linkFalso.download = `conferencia_nota_${numNota}.xml`;
-        document.body.appendChild(linkFalso);
-        linkFalso.click(); // Dispara o clique invisível de download
-        document.body.removeChild(linkFalso);
-        window.URL.revokeObjectURL(urlDownload);
-        
-        alert(`[NFC-e Homologada!]\nEstoque baixado na tabela mestre e arquivo XML enviado automaticamente para a pasta de Downloads.`);
+        const resultado = await resposta.json();
+
+        // Faz o download automático do XML oficial 4.00 (com <IBSCBS> e assinatura)
+        if (resultado.xml) {
+            const blob = new Blob([resultado.xml], { type: "application/xml" });
+            const urlDownload = window.URL.createObjectURL(blob);
+            const linkFalso = document.createElement("a");
+
+            const nomeArquivo = resultado.chave_acesso
+                ? `NFe${resultado.chave_acesso}.xml`
+                : `nota_${resultado.numero_nota}.xml`;
+
+            linkFalso.href = urlDownload;
+            linkFalso.download = nomeArquivo;
+            document.body.appendChild(linkFalso);
+            linkFalso.click();
+            document.body.removeChild(linkFalso);
+            window.URL.revokeObjectURL(urlDownload);
+        }
+
+        alert(
+            `[Venda Finalizada com Sucesso!]\n` +
+            `Nota Nº: ${resultado.numero_nota}\n` +
+            `Status SEFAZ: ${resultado.status_sefaz}\n` +
+            `Chave: ${resultado.chave_acesso || "Gerada localmente"}`
+        );
+
         limparExibicaoTelas();
-        
+        document.getElementById("input-scanner").focus();
+
     } catch (e) {
-        console.error(e);
-        alert("Falha ao encerrar o lote fiscal e exportar o XML.");
+        console.error("[Erro Fechamento]:", e);
+        alert(`Falha ao finalizar venda: ${e.message}`);
     }
 }
 
@@ -440,6 +503,11 @@ window.addEventListener("keydown", function(e) {
         campoQtd.focus();
         campoQtd.setSelectionRange(campoQtd.value.length, campoQtd.value.length);
     }
+    if (e.key === "F4") {
+        e.preventDefault();
+        informarCpfNota();
+    }
+
     if (e.key === "F5") {
         e.preventDefault();
         cancelarItemEspecifico(); // Alterado de limparExibicaoTelas para a nova função
