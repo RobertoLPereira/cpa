@@ -1,4 +1,4 @@
-const CACHE_NAME = "pdv-fiscal-v4";
+const CACHE_NAME = "pdv-fiscal-v6";
 // Adicionamos o icon.png na lista de recursos locais que o navegador vai guardar em cache
 const ASSETS_TO_CACHE = [
     "index.html",

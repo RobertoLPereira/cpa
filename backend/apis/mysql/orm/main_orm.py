@@ -200,6 +200,25 @@ def emitir_relatorio_inconsistencias(session: Session = Depends(get_session)):
     except Exception as e:
         session.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+    
+@app.get("/api/v1/produtos/buscar")
+def buscar_produtos_pdv(q: str = "", session: Session = Depends(get_session)):
+    try:
+        termo = q.strip()
+        stmt = select(Produto).where(Produto.vuncom > Decimal("0.00"))
+
+        if termo:
+            busca_like = f"%{termo}%"
+            stmt = stmt.where(
+                (Produto.xprod.ilike(busca_like)) |
+                (Produto.cean.ilike(busca_like)) |
+                (Produto.cprod.ilike(busca_like))
+            )
+
+        produtos = session.exec(stmt.order_by(Produto.xprod).limit(50)).all()
+        return {"produtos": produtos}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/v1/retaguarda/estoque/processar-perdas")
 def post_processar_lote_perdas(lote: List[ItemPerda], session: Session = Depends(get_session)):

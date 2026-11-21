@@ -299,3 +299,27 @@ class LoginInput(BaseModel):
     usua_nome: str
     grupo: str
     usua_senha: str
+
+class Suprimento(SQLModel, table=True):
+    __tablename__ = "suprimento"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    terminal_id: str = Field(index=True)
+    operador: str
+    gerente_autorizador: Optional[str] = None
+    data_suprimento: datetime = Field(default_factory=datetime.now)
+    valor: Decimal = Field(default=Decimal("0.00"), max_digits=12, decimal_places=2)
+
+class Sangria(SQLModel, table=True):
+    __tablename__ = "sangria"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    terminal_id: str = Field(index=True)
+    operador: str
+    gerente_autorizador: Optional[str] = None
+    data_sangria: datetime = Field(default_factory=datetime.now)
+    valor: Decimal = Field(default=Decimal("0.00"), max_digits=12, decimal_places=2)
+
+class MovCaixaPayload(SQLModel):
+    terminal_id: str
+    operador: str
+    gerente_autorizador: Optional[str] = None
+    valor: Decimal
