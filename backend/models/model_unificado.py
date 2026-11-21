@@ -270,3 +270,32 @@ class NfePagamento(SQLModel, table=True):
     cnpj_credenciadora: Optional[str] = Field(default=None, max_length=14)
     tband: Optional[str] = Field(default=None, max_length=2)
     caut: Optional[str] = Field(default=None, max_length=20)
+
+from sqlalchemy import LargeBinary
+
+class Usuario(SQLModel, table=True):
+    __tablename__ = "usuarios"
+
+    id_usuario: Optional[int] = Field(default=None, primary_key=True)
+    usua_nome: Optional[str] = Field(default=None, max_length=50, index=True)
+    usua_cliente: Optional[int] = Field(default=None)
+    usua_grupo_geral: Optional[str] = Field(default=None, max_length=20)
+    usua_grupo_pdv: Optional[str] = Field(default=None, max_length=20)
+    usua_senha: Optional[str] = Field(default=None, max_length=20)
+    data_cadastro: Optional[datetime] = Field(default_factory=datetime.now)
+    ult_gravacao: Optional[datetime] = Field(default_factory=datetime.now)
+    lembrete: Optional[str] = Field(default=None, max_length=100)
+    dias_validade: Optional[int] = Field(default=None)
+    validade_senha: Optional[datetime] = Field(default=None)
+    usua_foto: Optional[bytes] = Field(default=None, sa_column=Column(LargeBinary))
+    usua_obs: Optional[bytes] = Field(default=None, sa_column=Column(LargeBinary))
+    situacao: Optional[str] = Field(default="A", max_length=1) # 'A'=Ativo, 'I'=Inativo
+    usua_config1: Optional[bytes] = Field(default=None, sa_column=Column(LargeBinary))
+    modelonfe: Optional[str] = Field(default="65", max_length=2)
+    nivel: Optional[str] = Field(default="1", max_length=1)
+    alterar_qtde: Optional[str] = Field(default="S", max_length=1)
+
+class LoginInput(BaseModel):
+    usua_nome: str
+    grupo: str
+    usua_senha: str

@@ -4,6 +4,7 @@ from decimal import Decimal
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlmodel import Session, select, text
 import uvicorn
@@ -18,6 +19,8 @@ from backend.apis.caixa_service import simular_item_cupom, gravar_venda_fiscal
 from backend.apis.caixa_routes import sincronizar_contingencia_para_mysql
 from backend.suporte.pdv_emissor import emitir_nota
 from backend.suporte.gerador_xml import gerar_xml_nfe
+from backend.apis.usuario_routes import usuario_router
+from backend.apis.caixa_routes import caixa_router
 app = FastAPI(
     title="API Central do Gerente Fiscal - PDV Espelho XML 4.00 + IBS/CBS",
     version="4.0"
@@ -26,10 +29,11 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False, # Importante: com allow_origins=["*"], allow_credentials deve ser False no padrão Fetch!
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 CERTIFICADO_PFX = os.getenv("CERTIFICADO_PFX", "certificado.pfx")
 CERTIFICADO_SENHA = os.getenv("CERTIFICADO_SENHA", "123456")
@@ -331,6 +335,13 @@ def fechar_caixa(caixa_id: int, dados: FechamentoCaixaInput, session: Session = 
             "situacao_caixa": "CONCILIADO" if diferenca == 0 else "DIVERGENTE"
         }
     }
+
+app.include_router(usuario_router)
+app.include_router(caixa_router)
+# Serve o frontend (versao3) na raiz http://localhost:8000
+caminho_frontend = os.path.join("frontend", "versao3")
+if os.path.exists(caminho_frontend):
+    app.mount("/", StaticFiles(directory=caminho_frontend, html=True), name="frontend")
 if __name__ == "__main__":
     # Inicia o servidor local na porta 8000
     uvicorn.run("backend.apis.mysql.orm.main_orm:app", host="0.0.0.0", port=8000, reload=True)

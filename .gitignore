@@ -16,3 +16,10 @@ env/
 
 # Arquivos de variáveis de ambiente (onde ficam suas senhas/chaves de API)
 .env
+build/
+dist/
+*.spec
+*.db 
+*.log
+*.pfx
+*.zip

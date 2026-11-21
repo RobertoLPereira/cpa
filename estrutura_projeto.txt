@@ -1,0 +1,29 @@
+O projeto está organizado da seguinte maneira:
+  cpa
+  .venv
+  .vscode
+  backend
+    |-apis
+      |-mysql
+        |-orm
+            -__init__.py
+            -config.py
+            -main_orm.py
+      |-sqlite
+      caixa_routes.py
+      caixa_service.py
+      usuario_routes.py
+      usuario_service.py
+    |-care 
+    |-models
+    |-suporte
+    certificado.pfx
+ frontend
+    |-versao1
+    |-versao2
+    |-versao3
+.env
+.gitignore
+pdv_cpa.db
+readme.md 
+run_server.py

@@ -1,13 +1,18 @@
 import os
 from pathlib import Path
+import sys
 import pymysql
 from sqlalchemy import event
 from sqlalchemy.engine import make_url
 from sqlmodel import SQLModel, Session, create_engine
 from .config import settings
 
-# 1. Caminho absoluto do SQLite na raiz do projeto (D:\cpa\pdv_cpa.db)
-BASE_DIR = Path(__file__).resolve().parents[3]  # Sobe de orm -> mysql -> apis -> backend -> D:\cpa
+# 1. Caminho absoluto do SQLite: ao lado do .exe em produção ou na raiz D:\cpa em desenvolvimento
+if getattr(sys, "frozen", False):
+    BASE_DIR = Path(sys.executable).resolve().parent
+else:
+    BASE_DIR = Path(__file__).resolve().parents[4]  # orm -> mysql -> apis -> backend -> raiz (cpa)
+
 SQLITE_PATH = BASE_DIR / "pdv_cpa.db"
 SQLITE_URL = f"sqlite:///{SQLITE_PATH}"
 
