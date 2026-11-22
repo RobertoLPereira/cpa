@@ -1,0 +1,79 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: Tahoma, Arial, sans-serif;
+  background-color: var(--bg-principal);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 8px;
+  overflow: hidden;
+  user-select: none;
+}
+
+.hidden { display: none !important; }
+
+.bevel-panel {
+  background: var(--bg-painel);
+  border: 2px outset var(--borda-painel);
+  box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.campo-amarelo {
+  background-color: var(--bg-campo-destaque);
+  color: var(--cor-primaria);
+  font-weight: bold;
+  border: 1px inset #808080;
+}
+
+.campo-qtde {
+  background-color: var(--bg-campo-qtde);
+  color: var(--cor-primaria);
+  font-weight: bold;
+  border: 1px inset #808080;
+}
+
+.btn-pdv {
+  background: var(--bg-botao);
+  border: 1px outset var(--borda-painel);
+  color: var(--texto-botao);
+  font-weight: bold;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.btn-pdv:active { border-style: inset; }
+.btn-pdv:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Impressão Térmica Direta (Rolo 80mm) */
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+  body * {
+    visibility: hidden !important;
+  }
+  #bobina-cupom,
+  #bobina-cupom * {
+    visibility: visible !important;
+  }
+  #bobina-cupom {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 78mm !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: none !important;
+    padding: 4mm 2mm !important;
+    font-family: 'Courier New', monospace !important;
+    font-size: 10pt !important;
+    line-height: 1.25 !important;
+    white-space: pre-wrap !important;
+  }
+}

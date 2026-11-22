@@ -1,0 +1,33 @@
+/* ==========================================================================
+   TEMAS.CSS - Paletas de cores por empresa (White-label)
+   ========================================================================== */
+
+/* TEMA PADRÃO (Clássico Java: Cinza e Azul) */
+:root {
+  --bg-principal: #d4d0c8;
+  --bg-painel: #ece9d8;
+  --borda-painel: #ffffff;
+  --cor-primaria: #0000ff;       /* Textos principais e labels */
+  --cor-secundaria: #000080;     /* Títulos e barras de modais */
+  --cor-gradiente-modal: linear-gradient(90deg, #000080, #1084d0);
+  --bg-campo-destaque: #fff8b6;  /* Amarelo claro dos visores */
+  --bg-campo-qtde: #ffff99;      /* Amarelo vivo da quantidade/scanner */
+  --bg-bobina: #fffcca;          /* Papel térmico */
+  --bg-botao: linear-gradient(#f8f8f8, #dcdcdc);
+  --texto-botao: #0000ff;
+}
+
+/* TEMA EMPRESA 2: FACHADA VERDE E AMARELO */
+body.tema-verde-amarelo {
+  --bg-principal: #e6f0e8;       /* Verde bem clarinho no fundo da tela */
+  --bg-painel: #f4f9f5;          /* Painéis quase brancos com tom esverdeado */
+  --borda-painel: #a3c9ab;       /* Borda verde suave */
+  --cor-primaria: #006622;       /* Verde bandeira escuro para textos e labels */
+  --cor-secundaria: #004d1a;     /* Verde profundo para títulos */
+  --cor-gradiente-modal: linear-gradient(90deg, #006622, #1e8e3e);
+  --bg-campo-destaque: #fff380;  /* Amarelo ouro vibrante nos visores */
+  --bg-campo-qtde: #ffeb3b;      /* Amarelo forte nos campos de entrada */
+  --bg-bobina: #fffde7;          /* Papel térmico creme-amarelado */
+  --bg-botao: linear-gradient(#ffffff, #d9ead3); /* Botão com degradê verde claro */
+  --texto-botao: #004d1a;
+}

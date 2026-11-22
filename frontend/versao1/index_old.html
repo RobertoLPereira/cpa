@@ -1,358 +1,368 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDV Caixa - Reforma Tributária & IBPT</title>
-    <style>
-        /* VARIÁVEIS DE DESIGN NATIVAS */
-        :root {
-            --bg-principal: #0f172a;
-            --bg-cards: #020617;
-            --bg-inputs: #1e293b;
-            --border-color: #334155;
-            --text-main: #f8fafc;
-            --text-secondary: #94a3b8;
-            --accent-green: #10b981;
-            --accent-sky: #0ea5e9;
-            --accent-amber: #f59e0b;
-            --accent-rose: #ef4444;
-        }
-
-        /* RESET FISCAL E TIPOGRAFIA */
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
-        body { font-family: Tahoma, Arial, sans-serif; background-color: #d4d0c8; user-select: none; }
-         html { height: 100%; background-color: var(--bg-principal); color: var(--text-main); overflow: hidden; user-select: none; }
-        .font-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
-        .coupon-font { font-family: 'Courier New', Courier, monospace; }
-        .hidden { display: none !important; }
-
-        /* CABEÇALHO */
-        /* CABEÇALHO CORRIGIDO */
-            .main-header { 
-                background-color: var(--bg-cards); 
-                border-bottom: 1px solid var(--border-color); 
-                padding: 8px 16px; 
-                display: flex; 
-                justify-content: space-between; 
-                align-items: center; /* Antes estava 'items: center' */
-                height: 50px; 
-            }
-        .header-title-box { display: flex; align-items: center; gap: 12px; }
-        .badge-status { background-color: var(--accent-green); color: #020617; font-size: 11px; font-weight: bold; padding: 2px 8px; border-radius: 4px; }
-        .header-meta { display: flex; gap: 16px; font-size: 12px; color: var(--text-secondary); }
-
-        /* INTERFACE EXPANSÍVEL (GRID DINÂMICO) */
-        .pdv-container { display: grid; grid-template-columns: 6fr 3fr 3fr; gap: 16px; padding: 16px; height: calc(100vh - 95px); overflow: hidden; transition: grid-template-columns 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .pdv-container.manager-hidden { grid-template-columns: 8fr 4fr 0fr; gap: 16px 0px; }
-        .column-panel { display: flex; flex-direction: column; gap: 16px; overflow: hidden; height: 100%; transition: opacity 0.2s; }
-        .pdv-container.manager-hidden .manager-column { opacity: 0; pointer-events: none; }
-       
-        /* COMPONENTES DE OPERAÇÃO - CORES SUAVES E NOVOS CAMPOS */
-        .scanner-card { 
-            background-color: #111827; /* Tom grafite escuro mais suave que o preto total */
-            border: 1px solid #374151; 
-            padding: 16px; 
-            border-radius: 8px; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 12px; 
-        }
-        .scanner-label { 
-            font-size: 11px; 
-            font-weight: bold; 
-            text-transform: uppercase; 
-            color: #9ca3af; 
-            display: flex; 
-            justify-content: space-between; 
-        }
-        .scanner-input { 
-            width: 100%; 
-            background-color: #1f2937; 
-            border: 1px solid #4b5563; 
-            border-radius: 4px; 
-            padding: 8px 12px; 
-            font-size: 14px; 
-            color: var(--text-main); 
-            outline: none; 
-            transition: border-color 0.15s;
-        }
-        .scanner-input:focus { 
-            border-color: var(--accent-sky); 
-            box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.2);
-        }
-
-        /* Grid para os campos rápidos de Qtd e Preço abaixo do Scanner */
-        .quick-fields-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-        .quick-field-box {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        .quick-field-box label {
-            font-size: 10px;
-            font-weight: bold;
-            color: #9ca3af;
-            text-transform: uppercase;
-        }
-        .quick-field-input {
-            width: 100%;
-            background-color: #1f2937;
-            border: 1px solid #4b5563;
-            border-radius: 4px;
-            padding: 6px 10px;
-            font-size: 13px;
-            color: #f3f4f6;
-            font-family: 'JetBrains Mono', monospace;
-            text-align: right;
-            outline: none;
-        }
-        .quick-field-input:focus {
-            border-color: var(--accent-amber);
-        }
-
-        .last-item-card { background-color: var(--bg-cards); border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; min-height: 58px; }
-        .table-wrapper { flex: 1; background-color: var(--bg-cards); border: 1px solid var(--border-color); border-radius: 8px; overflow-y: auto; }
-        
-        /* GRADE/TABELA COMERICAL */
-        .items-table { width: 100%; border-collapse: collapse; text-align: left; }
-        .items-table th { background-color: #010409; font-size: 11px; font-weight: bold; color: var(--text-secondary); padding: 10px; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 10; }
-        .items-table td { padding: 8px 10px; font-size: 12px; border-bottom: 1px solid #1e293b; }
-        .sub-text-fiscal { font-size: 10px; color: var(--text-secondary); margin-top: 2px; }
-        /*nfe*/
-        .bevel-panel { background: #ece9d8; border: 2px outset #ffffff; box-shadow: 1px 1px 2px rgba(0,0,0,0.25); }
-    .campo-amarelo { background-color: #fff8b6; color: #0000ff; font-weight: bold; border: 1px inset #808080; }
-    .campo-qtde { background-color: #ffff99; color: #0000ff; font-weight: bold; border: 1px inset #808080; }
-    .bobina-papel { background-color: #fffcca; font-family: 'Courier New', monospace; font-weight: bold; border: 2px inset #808080; }
-    .btn-pdv { background: linear-gradient(#f8f8f8, #dcdcdc); border: 1px outset #fff; color: #0000ff; font-weight: bold; font-size: 11px; cursor: pointer; }
-    .btn-pdv:active { border-style: inset; }
-    .btn-pdv:disabled { opacity: 0.45; cursor: not-allowed; }
-    .totalizador-card { background-color: var(--bg-cards); border: 1px solid var(--border-color); padding: 16px; border-radius: 8px; display: flex; flex-direction: column; gap: 12px; }
-            .total-title { font-size: 11px; font-weight: bold; text-transform: uppercase; color: var(--text-secondary); }
-            .total-value { font-size: 26px; font-weight: 900; color: var(--accent-green); line-height: 1; }
-            .split-iva-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; border-top: 1px solid var(--border-color); padding-top: 8px; }
-            .split-iva-box { background-color: rgba(30,41,59,0.4); padding: 6px 10px; border-radius: 4px; border: 1px solid #1e293b; font-size: 11px; }
-            
-            .admin-panel { flex: 1; background-color: var(--bg-cards); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
-            .admin-title { font-size: 11px; font-weight: bold; text-transform: uppercase; color: var(--text-secondary); border-bottom: 1px solid var(--border-color); padding-bottom: 6px; }
-            .btn-stack { display: flex; flex-direction: column; gap: 8px; }
-            .btn-fiscal { width: 100%; text-align: left; background-color: var(--bg-inputs); border: 1px solid var(--border-color); color: var(--text-main); font-size: 12px; font-weight: 500; padding: 8px 12px; border-radius: 4px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.15s; }
-            .btn-fiscal:hover { background-color: #334155; }
-            .btn-audit-active { background-color: #0c4a6e; border-color: #0369a1; color: #e0f2fe; font-weight: bold; }
-            .btn-audit-active:hover { background-color: #075985; }
-            
-            .rejection-box { flex: 1; border: 1px solid var(--border-color); background-color: rgba(1,4,9,0.3); border-radius: 6px; padding: 8px; display: flex; flex-direction: column; overflow: hidden; }
-            
-            .pdv-footer { background-color: var(--bg-cards); border-top: 1px solid var(--border-color); padding: 8px 16px; text-align: center; height: 45px; }
-            .shortcuts-bar { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; align-items: center; height: 100%; }
-            .key-badge { background-color: var(--bg-inputs); border: 1px solid var(--border-color); font-size: 11px; font-family: monospace; color: #cbd5e1; padding: 3px 8px; border-radius: 4px; }
-            .key-badge b { margin-right: 4px; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FRENTE DE CAIXA - NFC-e</title>
+  <style>* { box-sizing: border-box; margin: 0; padding: 0; }</style>
+  <link rel="stylesheet" href="nfce.css">
 </head>
-<body class="h-screen flex flex-col justify-between p-2 overflow-hidden">
+<body>
 
-  <!-- CABEÇALHO (jPanel3 e jPanel4 do Java) -->
-  <header class="grid grid-cols-12 gap-2 mb-2">
-    <div class="col-span-8 bevel-panel p-2 flex items-center justify-between">
-      <div class="text-center flex-1">
-        <h1 class="text-3xl font-extrabold text-blue-700 tracking-wide leading-none">FRENTE DE CAIXA</h1>
-        <span id="badge-versao" class="inline-block mt-1 px-4 py-0.5 text-xs font-bold text-blue-800 bg-gray-200 border">Versão: 4.0 Web</span>
+  <!-- CABEÇALHO -->
+  <header>
+    <div class="bevel-panel header-esq">
+      <div class="titulo-caixa">
+        <h1>FRENTE DE CAIXA</h1>
+        <span id="badge-versao" class="badge-versao">Versão: 4.0 Web</span>
       </div>
-      <div class="text-center px-4 border-l border-gray-300">
-        <div id="lbl-ambiente" class="text-base font-bold text-red-600">HOMOLOGAÇÃO</div>
-        <div id="lbl-status-sefaz" class="text-sm font-bold text-green-600">107 - Serviço em Operação</div>
+      <div class="status-sefaz-box">
+        <div id="lbl-ambiente">HOMOLOGAÇÃO</div>
+        <div id="lbl-status-sefaz">107 - Serviço em Operação</div>
       </div>
     </div>
 
-    <div class="col-span-4 bevel-panel p-2 grid grid-cols-2 gap-1 text-xs font-bold text-blue-700">
-      <div id="header-operador-badge" class="border p-1 bg-gray-100 truncate">Operador: ---</div>
-      <div id="lbl-data" class="border p-1 bg-gray-100">Data: --/--/----</div>
-      <div id="header-terminal-badge" class="border p-1 bg-gray-100">Caixa: CAIXA-01</div>
-      <div id="lbl-hora" class="border p-1 bg-gray-100">Hora: 00:00:00</div>
+    <div class="bevel-panel header-dir">
+      <div id="header-operador-badge">Operador: ---</div>
+      <div id="lbl-data">Data: --/--/----</div>
+      <div id="header-terminal-badge">Caixa: CAIXA-01</div>
+      <div id="lbl-hora">Hora: 00:00:00</div>
     </div>
   </header>
 
   <!-- CORPO PRINCIPAL -->
-  <main id="aba-caixa" class="flex-1 grid grid-cols-12 gap-3 overflow-hidden">
-    
-    <!-- COLUNA ESQUERDA: Dados do Produto, Foto e Descontos/Acréscimos -->
-    <section class="col-span-7 flex flex-col justify-between">
+  <main id="aba-caixa">
+    <!-- ESQUERDA -->
+    <section class="col-esquerda">
       <div>
-        <!-- Linha EAN + Procura Produto -->
-        <div class="flex items-center gap-3 mb-2">
-          <label id="lbl-ean" for="input-scanner" class="text-xs font-bold text-blue-700 w-36 text-right">Cód. EAN / Produto:</label>
-          <input id="input-scanner" type="text" autocomplete="off"
-            title='Digite o Cod.EAN (Ex: 7890123456789), "." + cod.interno (Ex: .123) ou "*" + cod.externo (Ex: *F-321)'
-            class="w-52 h-9 px-2 text-lg font-bold text-red-700 bg-gray-100 border-2 border-gray-400 focus:bg-yellow-100 outline-none" />
-          <button onclick="abrirBuscaProduto()" id="btn-procura-produto" class="btn-pdv px-4 py-2 text-xs">
+        <div class="linha-ean">
+          <label id="lbl-ean" for="input-scanner">Cód. EAN / Produto:</label>
+          <input id="input-scanner" type="text" autocomplete="off" />
+          <button onclick="abrirBuscaProduto()" id="btn-procura-produto" class="btn-pdv" style="height:34px;">
             [F1] PROCURA PRODUTO
           </button>
         </div>
 
-        <!-- Descrição do Produto -->
-        <div class="mb-3">
-          <label class="block text-xs font-bold text-blue-700 mb-1">Descrição do Produto:</label>
-          <input id="txt-descricao" type="text" readonly value="CAIXA LIVRE"
-            class="w-full h-12 px-3 text-2xl campo-amarelo uppercase" />
+        <div class="grupo-descricao">
+          <label>Descrição do Produto:</label>
+          <input id="txt-descricao" type="text" readonly value="CAIXA LIVRE" class="campo-amarelo" />
         </div>
 
-        <!-- Grid Central: Valores à esquerda + Foto do Produto à direita -->
-        <div class="grid grid-cols-12 gap-3 items-start">
-          <div class="col-span-6 space-y-2">
-            <div class="flex items-center justify-end gap-2">
-              <label class="text-xs font-bold text-blue-700">Quantidade:</label>
-              <input id="input-quantidade" type="text" value="1.00" readonly class="w-24 h-8 text-center text-lg campo-qtde" />
-              <input id="txt-unidade" type="text" value="UN" readonly class="w-12 h-8 text-center text-lg campo-qtde" />
+        <div class="grid-produto-foto">
+          <div class="campos-valores">
+            <div class="linha-campo">
+              <label>Quantidade:</label>
+              <input id="input-quantidade" type="text" value="1.00" readonly class="campo-qtde" />
+              <input id="txt-unidade" type="text" value="UN" readonly class="campo-qtde" />
             </div>
 
-            <div class="flex justify-end">
-              <button onclick="alterarQuantidade()" id="btn-altera-qtde" class="btn-pdv w-48 py-1.5">
+            <div class="linha-campo">
+              <button onclick="alterarQuantidade()" id="btn-altera-qtde" class="btn-pdv" style="width:195px;">
                 [F2] Altera Qtde
               </button>
             </div>
 
-            <div class="flex items-center justify-end gap-2 pt-2">
-              <label class="text-xs font-bold text-blue-700">Preço Unitário:</label>
-              <input id="txt-preco-unit" type="text" value="0,00" readonly class="w-32 h-8 px-2 text-right text-lg campo-amarelo" />
+            <div class="linha-campo" style="margin-top:6px;">
+              <label>Preço Unitário:</label>
+              <input id="txt-preco-unit" type="text" value="0,00" readonly class="campo-amarelo input-valor" />
             </div>
 
-            <div class="flex items-center justify-end gap-2">
-              <label class="text-xs font-bold text-blue-700">Total do Produto:</label>
-              <input id="txt-total-prod" type="text" value="0,00" readonly class="w-32 h-8 px-2 text-right text-lg campo-amarelo" />
+            <div class="linha-campo">
+              <label>Total do Produto:</label>
+              <input id="txt-total-prod" type="text" value="0,00" readonly class="campo-amarelo input-valor" />
             </div>
 
-            <div class="flex items-center justify-end gap-2 pt-3">
-              <label class="text-xs font-bold text-blue-700">Número Pedido:</label>
-              <input id="txt-num-pedido" type="text" value="000001" readonly class="w-32 h-8 px-2 text-right text-lg campo-amarelo" />
+            <div class="linha-campo" style="margin-top:8px;">
+              <label>Número Pedido:</label>
+              <input id="txt-num-pedido" type="text" value="000001" readonly class="campo-amarelo input-valor" />
             </div>
           </div>
 
-          <!-- Painel Foto do Produto (jPFoto) -->
-          <div class="col-span-6 bevel-panel bg-gray-600 h-56 flex items-center justify-center p-1">
-            <img id="img-produto" src="" alt="Foto do Produto" class="max-h-full max-w-full object-contain hidden" />
-            <div id="placeholder-logo" class="text-center text-white text-xs font-bold p-4">
-              LOGO DO EMITENTE / SEM FOTO
-            </div>
+          <div class="bevel-panel quadro-foto">
+            <img id="img-produto" src="nfe_400.jpg" alt="Logo Emitente"
+                onerror="this.classList.add('hidden'); document.getElementById('placeholder-logo').classList.remove('hidden');" />
+            <div id="placeholder-logo" class="hidden">LOGO DO EMITENTE<br>SEM FOTO</div>
           </div>
+
+
         </div>
 
-        <!-- Botões F12 Acréscimo(%) e F11 Desconto(Vlr) -->
-        <div class="grid grid-cols-2 gap-3 mt-4">
-          <div class="flex items-center gap-2">
-            <span id="lbl-perc-acrescimo" class="text-xs font-bold text-red-600 w-10"></span>
-            <button onclick="aplicarAcrescimo()" id="btn-acrescimo" class="btn-pdv flex-1 h-11 text-sm">
+        <div class="linha-acrescimo-desconto">
+          <div class="box-acrescimo">
+            <span id="lbl-perc-acrescimo"></span>
+            <button onclick="aplicarAcrescimo()" id="btn-acrescimo" class="btn-pdv btn-grande">
               [F12] Acréscimo (%)
             </button>
           </div>
-          <button onclick="aplicarDesconto()" id="btn-desconto" class="btn-pdv h-11 text-sm">
+          <button onclick="aplicarDesconto()" id="btn-desconto" class="btn-pdv btn-grande">
             [F11] Desconto (Vlr)
           </button>
         </div>
 
-        <!-- Documento do Cliente (jLDocCli) -->
-        <div id="lbl-doc-cliente" class="text-xs font-bold text-blue-700 mt-2 h-5">
-          Documento: Não informado
-        </div>
+        <div id="lbl-doc-cliente">Documento: Não informado</div>
       </div>
 
-      <!-- MENU AUXILIAR [F7] (jPMenuAux - Oculto por padrão) -->
-      <div id="painel-menu-aux" class="hidden bevel-panel p-2 grid grid-cols-4 gap-2 mb-1">
-        <button onclick="executarSuprimento()" class="btn-pdv py-2.5">[F1] SUPRIMENTO</button>
-        <button onclick="executarSangria()" class="btn-pdv py-2.5">[F2] SANGRIA</button>
-        <button onclick="reimprimirCupom()" class="btn-pdv py-2.5">[F3] Reimpressão</button>
-        <button onclick="abrirCalculadora()" class="btn-pdv py-2.5">[F4] CALCULADORA</button>
-        <button onclick="abrirCaixa()" class="btn-pdv py-2.5">[F5] Abre Caixa</button>
-        <button onclick="emitirLeituraX()" class="btn-pdv py-2.5">[F6] Leitura X</button>
-        <button disabled class="btn-pdv py-2.5 opacity-0"></button>
-        <button onclick="toggleMenuAuxiliar(false)" class="btn-pdv py-2.5 text-red-700">[F7] FECHAR</button>
+      <div id="painel-menu-aux" class="bevel-panel hidden">
+        <button onclick="executarSuprimento()" class="btn-pdv">[F1] SUPRIMENTO</button>
+        <button onclick="executarSangria()" class="btn-pdv">[F2] SANGRIA</button>
+        <button onclick="reimprimirCupom()" class="btn-pdv">[F3] Reimpressão</button>
+        <button onclick="abrirCalculadora()" class="btn-pdv">[F4] CALCULADORA</button>
+        <button onclick="abrirCaixa()" class="btn-pdv">[F5] Abre Caixa</button>
+        <button onclick="emitirLeituraX()" class="btn-pdv">[F6] Leitura X</button>
+        <button disabled class="btn-pdv" style="visibility:hidden;"></button>
+        <button onclick="toggleMenuAuxiliar(false)" class="btn-pdv" style="color:#cc0000;">[F7] FECHAR</button>
       </div>
     </section>
 
-    <!-- COLUNA DIREITA: Status Venda, Bobina e Totalizadores -->
-    <section class="col-span-5 flex flex-col justify-between">
-      <div class="text-center py-1">
-        <span id="lbl-status-venda" class="text-2xl font-extrabold text-blue-900">Venda Aberta</span>
+    <!-- DIREITA -->
+    <section class="col-direita">
+      <div class="status-venda-topo">
+        <span id="lbl-status-venda">Venda Aberta</span>
       </div>
 
-      <!-- Bobina Térmica (jList bobina) -->
-      <div id="bobina-cupom" class="bobina-papel flex-1 p-3 overflow-y-auto text-xs leading-relaxed text-gray-900">
-        <div>*---------------- Venda Aberta ----------------*</div>
-        <div>ITEM CODIGO    DESCRIÇÃO        QTD   UNIT   TOTAL</div>
-        <div>------------------------------------------------</div>
+      <div id="bobina-cupom" class="bobina-papel">
+*---------------- Venda Aberta ----------------*
+ITEM  QTDE    UNIT    TOTAL DESCRIÇÃO
+------------------------------------------------
       </div>
 
-      <!-- Totalizadores (Desconto e Total) -->
-      <div class="mt-2 space-y-2">
-        <div class="flex items-center justify-end gap-3">
-          <label class="text-xl font-bold text-blue-700">Desconto:</label>
-          <input id="visor-desconto" type="text" value="0,00" readonly class="w-52 h-10 px-3 text-right text-2xl campo-amarelo" />
+      <div class="totais-box">
+        <div class="linha-total">
+          <label>Desconto:</label>
+          <input id="visor-desconto" type="text" value="0,00" readonly class="campo-amarelo" />
         </div>
-        <div class="flex items-center justify-end gap-3">
-          <label class="text-2xl font-bold text-blue-700">Total :</label>
-          <input id="visor-total" type="text" value="0,00" readonly class="w-52 h-14 px-3 text-right text-4xl campo-amarelo" />
+        <div class="linha-total">
+          <label>Total :</label>
+          <input id="visor-total" type="text" value="0,00" readonly class="campo-amarelo" />
         </div>
       </div>
     </section>
   </main>
 
-  <!-- BARRA DE COMANDOS INFERIOR (jPanel1) -->
-  <footer class="bevel-panel p-1.5 mt-2 grid grid-cols-8 gap-1.5">
-    <button onclick="iniciarVenda()" id="btn-iniciar" class="btn-pdv h-11">[ENTER] INICIAR VENDA</button>
-    <button onclick="informarCpfNota()" id="btn-cpf" class="btn-pdv h-11">[F4] C P F / C N P J</button>
-    <button onclick="cancelarItemEspecifico()" id="btn-canc-item" class="btn-pdv h-11">[F5] CANCELA ITEM</button>
-    <button onclick="cancelarCupomAtual()" id="btn-canc-venda" class="btn-pdv h-11">[F6] CANCELA VDA</button>
-    <button onclick="toggleMenuAuxiliar()" id="btn-menu" class="btn-pdv h-11">[F7] Menu</button>
-    <button onclick="finalizarFaturamentoCupom()" id="btn-finalizar" class="btn-pdv h-11">[F8] FINALIZAR</button>
-    <button onclick="focarEAN()" id="btn-ean" class="btn-pdv h-11">[F9] EAN</button>
-    <button onclick="fazerLogoff()" id="btn-sair" class="btn-pdv h-11">[F10] SAIR</button>
+  <!-- BARRA INFERIOR -->
+  <footer class="bevel-panel">
+    <button onclick="iniciarVenda()" id="btn-iniciar" class="btn-pdv">[ENTER] INICIAR VENDA</button>
+    <button onclick="informarCpfNota()" id="btn-cpf" class="btn-pdv">[F4] C P F / C N P J</button>
+    <button onclick="cancelarItemEspecifico()" id="btn-canc-item" class="btn-pdv">[F5] CANCELA ITEM</button>
+    <button onclick="cancelarCupomAtual()" id="btn-canc-venda" class="btn-pdv">[F6] CANCELA VDA</button>
+    <button onclick="toggleMenuAuxiliar()" id="btn-menu" class="btn-pdv">[F7] Menu</button>
+    <button onclick="finalizarFaturamentoCupom()" id="btn-finalizar" class="btn-pdv">[F8] FINALIZAR</button>
+    <button onclick="focarEAN()" id="btn-ean" class="btn-pdv">[F9] EAN</button>
+    <button onclick="fazerLogoff()" id="btn-sair" class="btn-pdv">[F10] SAIR</button>
   </footer>
+    <!-- MODAL [F1] PROCURA PRODUTO (ImportaProduto) -->
+  <div id="modal-procura-produto" class="modal-overlay hidden">
+    <div class="modal-janela">
+      <div class="modal-titulo-bar">
+        <span>LOCALIZAR PRODUTO [F1]</span>
+        <button onclick="fecharBuscaProduto()" class="btn-pdv" style="padding: 1px 6px;">X</button>
+      </div>
 
-    <!-- SCRIPT NATIVO DE ACOPLAMENTO E CONTROLE DE VISIBILIDADE -->
-    <script>
-        document.getElementById('toggle-manager-btn').addEventListener('click', function() {
-            const layout = document.getElementById('pdv-main-layout');
-            const column = document.getElementById('manager-panel-column');
-            
-            if (layout.classList.contains('manager-hidden')) {
-                layout.classList.remove('manager-hidden');
-                column.classList.remove('hidden');
-                this.innerText = 'PAINEL GERENTE: VISÍVEL';
-                this.style.backgroundColor = 'var(--bg-inputs)';
-            } else {
-                layout.classList.add('manager-hidden');
-                column.classList.add('hidden');
-                this.innerText = 'PAINEL GERENTE: OCULTO';
-                this.style.backgroundColor = '#064e3b'; // Tom verde discreto indicando modo focado
-            }
-        });
+      <div class="modal-busca-box">
+        <label for="input-busca-produto">Descrição / EAN:</label>
+        <input id="input-busca-produto" type="text" autocomplete="off" placeholder="DIGITE O NOME OU CÓDIGO DO PRODUTO..." />
+        <button onclick="consultarProdutosAPI()" class="btn-pdv" style="height: 32px;">Pesquisar</button>
+      </div>
 
-        // Correção de amostragem do elemento monitor do último item (Garante a compatibilidade com a função renderizarCarrinhoECupom)
-        const observer = new MutationObserver(() => {
-            const monitor = document.getElementById('monitor-item');
-            const content = document.getElementById('monitor-item-content');
-            if (monitor && content) {
-                if (!monitor.classList.contains('hidden')) {
-                    content.classList.remove('hidden');
-                } else {
-                    content.classList.add('hidden');
-                }
-            }
-        });
-        observer.observe(document.getElementById('monitor-item'), { attributes: true, attributeFilter: ['class'] });
-    </script>
-    <!-- Scripts do PWA -->
-    <script src="auth_retaguarda.js"></script>
-    <script src="app.js"></script>
-    <script>
-        // Registra o Service Worker para habilitar o PWA Offline
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js')
-                .then(() => console.log("[PWA] Service Worker Homologado com Sucesso."));
-        }
-    </script>
+      <div class="modal-tabela-container">
+        <table class="tabela-produtos">
+          <thead>
+            <tr>
+              <th style="width: 75px;">Código</th>
+              <th style="width: 130px;">EAN / Barras</th>
+              <th>Descrição do Produto</th>
+              <th style="width: 50px; text-align: center;">Unid</th>
+              <th style="width: 100px; text-align: right;">Preço (R$)</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-produtos-busca">
+            <tr><td colspan="5" style="text-align:center; padding: 20px; color: #666;">Digite para pesquisar...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="modal-rodape">
+        <span>[↑ / ↓] Navegar &nbsp;|&nbsp; [ENTER] Confirmar Produto &nbsp;|&nbsp; [ESC] Fechar</span>
+        <div style="display: flex; gap: 8px;">
+          <button onclick="confirmarProdutoSelecionado()" class="btn-pdv" style="height: 32px; width: 110px;">[ENTER] Selecionar</button>
+          <button onclick="fecharBuscaProduto()" class="btn-pdv" style="height: 32px; width: 90px; color: #cc0000;">[ESC] Cancelar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+    <!-- MODAL [F8] EFETUA PAGAMENTO (EfetuaPagamento) -->
+  <div id="modal-efetua-pagamento" class="modal-overlay hidden">
+    <div class="modal-pgto-janela">
+      <div class="modal-titulo-bar">
+        <span>FINALIZAÇÃO DA VENDA - EFETUAR PAGAMENTO [F8]</span>
+        <button onclick="fecharModalPagamento()" class="btn-pdv" style="padding: 1px 6px;">X</button>
+      </div>
+
+      <div class="pgto-grid">
+        <!-- Esquerda: Lançamento da Forma de Pagamento -->
+        <div class="pgto-form-box">
+          <div>
+            <label for="select-forma-pgto">Forma de Pagamento (tPag):</label>
+            <select id="select-forma-pgto" class="pgto-select">
+              <option value="01">01 - DINHEIRO</option>
+              <option value="03">03 - CARTÃO DE CRÉDITO</option>
+              <option value="04">04 - CARTÃO DE DÉBITO</option>
+              <option value="17">17 - PIX</option>
+              <option value="02">02 - CHEQUE</option>
+              <option value="05">05 - CRÉDITO LOJA / CREDIÁRIO</option>
+              <option value="99">99 - OUTROS</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="input-valor-pgto">Valor a Lançar (R$):</label>
+            <input id="input-valor-pgto" type="text" autocomplete="off" class="pgto-input" />
+          </div>
+
+          <button onclick="adicionarPagamentoLista()" class="btn-pdv" style="height: 38px; font-size: 13px;">
+            [ENTER] Lançar Pagamento
+          </button>
+        </div>
+
+        <!-- Direita: Totalizadores + Lista de Pagamentos Lançados -->
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div class="pgto-resumo-cards">
+            <div class="pgto-card-valor">
+              <span>TOTAL A PAGAR:</span>
+              <strong id="pgto-total-cupom">0,00</strong>
+            </div>
+            <div class="pgto-card-valor">
+              <span>TOTAL PAGO:</span>
+              <strong id="pgto-total-pago" style="color: #16a34a;">0,00</strong>
+            </div>
+            <div class="pgto-card-valor">
+              <span>RESTANTE:</span>
+              <strong id="pgto-restante" style="color: #cc0000;">0,00</strong>
+            </div>
+            <div class="pgto-card-valor">
+              <span>TROCO:</span>
+              <strong id="pgto-troco" style="color: #000099;">0,00</strong>
+            </div>
+          </div>
+
+          <div class="pgto-lista-box">
+            <table class="tabela-produtos">
+              <thead>
+                <tr>
+                  <th>Forma de Pagamento</th>
+                  <th style="text-align: right;">Valor (R$)</th>
+                  <th style="width: 36px; text-align: center;">Ação</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-pagamentos-lancados"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-rodape" style="margin-top: 12px;">
+        <span>[ENTER] Lança / Confirma &nbsp;|&nbsp; [ESC] Cancelar</span>
+        <div style="display: flex; gap: 8px;">
+          <button id="btn-confirmar-pgto-final" onclick="confirmarEncerramentoVenda()" class="btn-pdv"
+                  style="height: 38px; padding: 0 16px; font-size: 13px; color: #006600;" disabled>
+            [F8] CONFIRMAR E EMITIR NFC-e
+          </button>
+          <button onclick="fecharModalPagamento()" class="btn-pdv" style="height: 38px; width: 100px; color: #cc0000;">
+            [ESC] Desistir
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+    <!-- MODAL [F3] REIMPRESSÃO / PEDIDOS PENDENTES (PedidosPendentes) -->
+  <div id="modal-reimpressao" class="modal-overlay hidden">
+    <div class="modal-janela" style="width: 860px; height: 490px;">
+      <div class="modal-titulo-bar">
+        <span>REIMPRESSÃO DE CUPOM / NOTAS PENDENTES [F3]</span>
+        <button onclick="fecharModalReimpressao()" class="btn-pdv" style="padding: 1px 6px;">X</button>
+      </div>
+
+      <div class="modal-busca-box" style="justify-content: space-between;">
+        <div style="display: flex; gap: 6px;">
+          <button onclick="carregarNotasReimpressao('TODAS')" id="filtro-nota-TODAS" class="btn-pdv">Todas</button>
+          <button onclick="carregarNotasReimpressao('AUTORIZADAS')" id="filtro-nota-AUTORIZADAS" class="btn-pdv">Autorizadas</button>
+          <button onclick="carregarNotasReimpressao('PENDENTES')" id="filtro-nota-PENDENTES" class="btn-pdv" style="color: #cc0000;">Pendentes / Contingência</button>
+        </div>
+        <span id="lbl-qtd-notas-reimp" style="font-size: 11px; font-weight: bold; color: #000080;">0 registros</span>
+      </div>
+
+      <div class="modal-tabela-container">
+        <table class="tabela-produtos">
+          <thead>
+            <tr>
+              <th style="width: 75px;">Nº Nota</th>
+              <th style="width: 45px;">Série</th>
+              <th style="width: 45px;">Mod</th>
+              <th style="width: 135px;">Data / Hora</th>
+              <th>Consumidor / Destinatário</th>
+              <th style="width: 95px; text-align: right;">Total (R$)</th>
+              <th style="width: 115px; text-align: center;">Status SEFAZ</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-notas-reimpressao"></tbody>
+        </table>
+      </div>
+
+            <div class="modal-rodape">
+        <span>[↑ / ↓] Navegar &nbsp;|&nbsp; [ENTER] Carregar na Bobina &nbsp;|&nbsp; [ESC] Fechar</span>
+        <div style="display: flex; gap: 6px;">
+          <button id="btn-transmitir-pendente" onclick="transmitirNotaPendente()" class="btn-pdv"
+                  style="height: 34px; padding: 0 10px; color: #b45309;" disabled>
+            Transmitir Pendente
+          </button>
+          <button onclick="executarReimpressaoSelecionada(true)" class="btn-pdv" style="height: 34px; padding: 0 10px;">
+            Baixar XML
+          </button>
+          <button onclick="executarReimpressaoSelecionada(false, true)" class="btn-pdv" style="height: 34px; padding: 0 12px; color: #000080;">
+            Imprimir 80mm
+          </button>
+          <button onclick="executarReimpressaoSelecionada(false, false)" class="btn-pdv" style="height: 34px; padding: 0 12px; color: #006600;">
+            [ENTER] Bobina
+          </button>
+          <button onclick="fecharModalReimpressao()" class="btn-pdv" style="height: 34px; width: 80px; color: #cc0000;">
+            [ESC] Fechar
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+    <!-- MODAL UNIVERSAL DE ENTRADA (Substitui todos os prompt() nativos) -->
+  <div id="modal-input-universal" class="modal-overlay hidden">
+    <div class="modal-pgto-janela" style="width: 420px;">
+      <div class="modal-titulo-bar">
+        <span id="modal-univ-titulo">ENTRADA DE DADOS</span>
+        <button onclick="fecharModalUniversal(null)" class="btn-pdv" style="padding: 1px 6px;">X</button>
+      </div>
+
+      <div style="padding: 10px 6px; display: flex; flex-direction: column; gap: 10px;">
+        <label id="modal-univ-label" for="modal-univ-campo" style="font-size: 13px; font-weight: bold; color: #0000ff;">
+          Informe o valor:
+        </label>
+        <input id="modal-univ-campo" type="text" autocomplete="off" class="pgto-input" style="text-align: center;" />
+        <span id="modal-univ-dica" style="font-size: 11px; color: #444; font-weight: bold;"></span>
+      </div>
+
+      <div class="modal-rodape" style="margin-top: 8px;">
+        <span>[ENTER] Confirmar &nbsp;|&nbsp; [ESC] Cancelar</span>
+        <div style="display: flex; gap: 8px;">
+          <button onclick="confirmarModalUniversal()" class="btn-pdv" style="height: 34px; width: 100px; color: #006600;">
+            [ENTER] OK
+          </button>
+          <button onclick="fecharModalUniversal(null)" class="btn-pdv" style="height: 34px; width: 90px; color: #cc0000;">
+            [ESC] Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="auth_retaguarda.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>

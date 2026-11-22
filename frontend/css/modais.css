@@ -1,0 +1,137 @@
+/* ==========================================================================
+   MODAIS.CSS - Janelas de diálogo (Busca, Pagamento, Reimpressão e Inputs)
+   ========================================================================== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.modal-janela,
+.modal-pgto-janela {
+  width: 780px;
+  max-width: 95vw;
+  background: var(--bg-painel); 
+  border: 2px outset var(--borda-painel);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+}
+
+.modal-janela { height: 460px; }
+
+.modal-titulo-bar {
+  background: var(--cor-gradiente-modal);
+  color: #ffffff;
+  font-weight: bold;
+  font-size: 13px;
+  padding: 5px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.modal-busca-box {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.modal-busca-box label { font-size: 12px; font-weight: bold; color: var(--cor-primaria); }
+
+#input-busca-produto {
+  flex: 1;
+  height: 32px;
+  padding: 0 8px;
+  font-size: 15px;
+  font-weight: bold;
+  text-transform: uppercase;
+  background: #ffff99;
+  color: #0000ff;
+  border: 2px inset #808080;
+}
+
+.modal-tabela-container {
+  flex: 1;
+  background: #ffffff;
+  border: 2px inset #808080;
+  overflow-y: auto;
+}
+
+.tabela-produtos { width: 100%; border-collapse: collapse; font-size: 12px; }
+
+.tabela-produtos th {
+  background: #d4d0c8;
+  color: var(--cor-secundaria);
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid #808080;
+  position: sticky;
+  top: 0;
+}
+
+.tabela-produtos td { padding: 6px 8px; border-bottom: 1px solid #e5e5e5; font-weight: bold; }
+.tabela-produtos tr.selecionado { background-color: #0a246a; background-color: var(--cor-secundaria); }
+
+.modal-rodape {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  font-size: 11px;
+  color: #333;
+  font-weight: bold;
+}
+
+/* Específicos do Modal de Pagamento [F8] */
+.pgto-grid { display: grid; grid-template-columns: 1fr 1.1fr; gap: 12px; }
+
+.pgto-form-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #f4f3ee;
+  padding: 10px;
+  border: 1px inset #999;
+}
+
+.pgto-form-box label { display: block; font-size: 12px; font-weight: bold; color: var(--cor-primaria); margin-bottom: 3px; }
+
+.pgto-select,
+.pgto-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 8px;
+  font-size: 16px;
+  font-weight: bold;
+  border: 2px inset #808080;
+}
+
+.pgto-select { background: #ffffff; color: #000080; }
+.pgto-input { background: var(--bg-campo-qtde); color: var(--cor-primaria); text-align: right; font-size: 20px; }
+
+.pgto-resumo-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+.pgto-card-valor {
+  background: var(--bg-campo-destaque);
+  border: 1px inset #808080;
+  padding: 6px 8px;
+  text-align: right;
+}
+
+.pgto-card-valor span { display: block; font-size: 11px; font-weight: bold; color: #333; text-align: left; }
+.pgto-card-valor strong { font-size: 20px; color: var(--cor-primaria); }
+
+.pgto-lista-box {
+  background: #ffffff;
+  border: 2px inset #808080;
+  height: 155px;
+  overflow-y: auto;
+}

@@ -1,8 +1,24 @@
-const CACHE_NAME = "pdv-fiscal-v6";
+const CACHE_NAME = "pdv-modular-v1";
 // Adicionamos o icon.png na lista de recursos locais que o navegador vai guardar em cache
 const ASSETS_TO_CACHE = [
-    "index.html",
-    "app.js",
+    "./",
+    "./index.html",
+    "./auth_retaguarda.js",
+    "./nfe_400.jpg",
+    "../css/temas.css",
+    "../css/base.css",
+    "../css/layout.css",
+    "../css/modais.css",
+    "../js/main.js",
+    "../js/state.js",
+    "../js/api.js",
+    "../js/ui/bobina.js",
+    "../js/ui/modal-universal.js",
+    "../js/ui/modal-busca.js",
+    "../js/ui/modal-pagamento.js",
+    "../js/ui/modal-reimp.js",
+    "../js/operacoes/venda.js",
+    "../js/operacoes/gaveta.js",
     "manifest.json",
     "icone.svg"
 ];

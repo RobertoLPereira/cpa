@@ -358,7 +358,8 @@ def fechar_caixa(caixa_id: int, dados: FechamentoCaixaInput, session: Session = 
 app.include_router(usuario_router)
 app.include_router(caixa_router)
 # Serve o frontend (versao3) na raiz http://localhost:8000
-caminho_frontend = os.path.join("frontend", "versao3")
+#caminho_frontend = os.path.join("frontend", "versao3")
+caminho_frontend = os.path.join("frontend")
 if os.path.exists(caminho_frontend):
     app.mount("/", StaticFiles(directory=caminho_frontend, html=True), name="frontend")
 if __name__ == "__main__":

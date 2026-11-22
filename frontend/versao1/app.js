@@ -87,50 +87,6 @@ function focarEAN() {
     }
 }
 
-function alterarQuantidade() {
-    if (!vendaIniciada) iniciarVenda();
-    if (typeof operadorAtivo !== "undefined" && operadorAtivo && operadorAtivo.alterar_qtde === "N") {
-        return alert("Seu usuário não possui permissão para alterar quantidade.");
-    }
-    const novaQtde = prompt("Informe a Quantidade:", qtdeAtual.toFixed(2));
-    if (novaQtde === null) return;
-    const parsed = parseFloat(novaQtde.replace(",", "."));
-    if (isNaN(parsed) || parsed <= 0) return alert("Quantidade inválida!");
-    qtdeAtual = parsed;
-    document.getElementById("input-quantidade").value = qtdeAtual.toFixed(2);
-    focarEAN();
-}
-
-function aplicarAcrescimo() {
-    if (!vendaIniciada) iniciarVenda();
-    if (totalBrutoCupom > 0) {
-        return alert("O % de Acréscimo só pode ser informado no início da venda (antes dos itens)!");
-    }
-    const val = prompt("Informe o percentual de Acréscimo (%):", percAcrescimo);
-    if (val === null) return;
-    const perc = parseFloat(val.replace(",", "."));
-    if (isNaN(perc) || perc < 0) return alert("Percentual inválido!");
-    percAcrescimo = perc;
-    document.getElementById("lbl-perc-acrescimo").innerText = `${percAcrescimo}%`;
-    focarEAN();
-}
-
-function aplicarDesconto() {
-    if (!vendaIniciada || totalBrutoCupom <= 0) {
-        return alert("Não há itens lançados para aplicar desconto.");
-    }
-    const val = prompt("Informe o valor do Desconto (R$):", totalDesconto.toFixed(2));
-    if (val === null) return;
-    const desc = parseFloat(val.replace(",", "."));
-    if (isNaN(desc) || desc < 0) return alert("Valor de desconto não pode ser negativo!");
-    if (desc > totalBrutoCupom * 0.5) {
-        return alert("Valor Desconto não pode ser maior que 50% do Total do Cupom!");
-    }
-    totalDesconto = desc;
-    atualizarVisoresTotais();
-    focarEAN();
-}
-
 async function registrarItemCarrinho() {
     if (!vendaIniciada) iniciarVenda();
     const inp = document.getElementById("input-scanner");
@@ -209,49 +165,6 @@ async function atualizarCupomNaTela() {
     } catch (erro) {
         alert("Falha ao comunicar com o Motor Fiscal.");
         carrinhoLocal.pop();
-    }
-}
-// ============================================================================
-// pdv_nfce.js - PARTE 2 DE 2 (Finalização, Cancelamentos, Menu F7 e Teclado)
-// ============================================================================
-
-function informarCpfNota() {
-    const doc = prompt("Informe o CPF ou CNPJ do consumidor (apenas números):", cpfCnpjClienteAtual || "");
-    if (doc === null) return;
-
-    const docLimpo = doc.replace(/\D/g, "");
-    if (docLimpo === "") {
-        cpfCnpjClienteAtual = null;
-        nomeClienteAtual = null;
-        document.getElementById("lbl-doc-cliente").innerText = "Documento: Não informado";
-        return;
-    }
-
-    if (docLimpo.length !== 11 && docLimpo.length !== 14) {
-        return alert("Documento inválido! Digite 11 dígitos para CPF ou 14 dígitos para CNPJ.");
-    }
-
-    cpfCnpjClienteAtual = docLimpo;
-    nomeClienteAtual = docLimpo.length === 14
-        ? (prompt("Informe a Razão Social / Nome do cliente:", nomeClienteAtual || "") || "CONSUMIDOR")
-        : "CONSUMIDOR";
-
-    document.getElementById("lbl-doc-cliente").innerText = `Documento: ${cpfCnpjClienteAtual} - ${nomeClienteAtual}`;
-    focarEAN();
-}
-
-function cancelarItemEspecifico() {
-    if (carrinhoLocal.length === 0) return alert("Não existe nenhum item digitado para esta venda!");
-    const numeroItemTexto = prompt("Digite o número do ITEM que deseja cancelar (ex: 001):");
-    if (!numeroItemTexto) return;
-
-    const indexParaRemover = parseInt(numeroItemTexto, 10) - 1;
-    if (isNaN(indexParaRemover) || indexParaRemover < 0 || indexParaRemover >= carrinhoLocal.length) {
-        return alert("Número de item inválido.");
-    }
-    if (confirm(`Confirma o Cancelamento do Item [ ${numeroItemTexto} ] ?`)) {
-        carrinhoLocal.splice(indexParaRemover, 1);
-        atualizarCupomNaTela();
     }
 }
 
@@ -866,21 +779,13 @@ window.addEventListener("keydown", (e) => {
 // ============================================================================
 // MENU AUXILIAR [F7]: SUPRIMENTO, SANGRIA E LEITURA X
 // ============================================================================
-function verificarPermissaoGerente() {
-    const grupo = (operadorAtivo?.grupo_geral || "").trim().toUpperCase();
-    if (grupo === "GERENTE" || grupo === "ADMIN" || grupo === "SUPORTE") {
-        return operadorAtivo.usua_nome;
-    }
-    const gerente = prompt("Operação restrita! Informe o usuário/senha do Gerente ou Supervisor:");
-    return gerente && gerente.trim() !== "" ? gerente.trim() : null;
-}
 
 async function executarSuprimento() {
     toggleMenuAuxiliar(false);
     const autorizador = verificarPermissaoGerente();
     if (!autorizador) return;
 
-    const valStr = prompt("Informe o valor do SUPRIMENTO (R$):", "0,00");
+    const valStr = await pedirDadoModal({ titulo: "SUPRIMENTO", label: "Valor do Suprimento (R$):", valorInicial: "0,00", tipo: "moeda" });
     if (valStr === null) return;
     const valor = parseFloat(valStr.replace(/\./g, "").replace(",", "."));
     if (isNaN(valor) || valor <= 0) return alert("Valor inválido para suprimento!");
@@ -912,7 +817,7 @@ async function executarSangria() {
     const autorizador = verificarPermissaoGerente();
     if (!autorizador) return;
 
-    const valStr = prompt("Informe o valor da SANGRIA (R$):", "0,00");
+    const valStr = await pedirDadoModal({ titulo: "SANGRIA", label: "Valor da Sangria (R$):", valorInicial: "0,00", tipo: "moeda" });
     if (valStr === null) return;
     const valor = parseFloat(valStr.replace(/\./g, "").replace(",", "."));
     if (isNaN(valor) || valor <= 0) return alert("Valor inválido para sangria!");
@@ -986,5 +891,196 @@ async function emitirLeituraX() {
         alert("Falha ao emitir Leitura X: " + e.message);
     } finally {
         focarEAN();
+    }
+}
+// ============================================================================
+// MOTOR DO MODAL UNIVERSAL (Substitui prompt() com máscaras e senha oculta)
+// ============================================================================
+let resolveModalUniversal = null;
+let tipoMascaraModalAtual = "texto";
+
+function pedirDadoModal({ titulo, label, valorInicial = "", tipo = "texto", dica = "" }) {
+    return new Promise((resolve) => {
+        resolveModalUniversal = resolve;
+        tipoMascaraModalAtual = tipo;
+
+        document.getElementById("modal-univ-titulo").innerText = titulo;
+        document.getElementById("modal-univ-label").innerText = label;
+        document.getElementById("modal-univ-dica").innerText = dica;
+
+        const inp = document.getElementById("modal-univ-campo");
+        inp.type = tipo === "senha" ? "password" : "text";
+        inp.style.textAlign = (tipo === "moeda" || tipo === "qtde" || tipo === "percentual") ? "right" : "center";
+        inp.value = valorInicial;
+
+        document.getElementById("modal-input-universal").classList.remove("hidden");
+        inp.focus();
+        inp.select();
+    });
+}
+
+function fecharModalUniversal(valorRetorno) {
+    document.getElementById("modal-input-universal").classList.add("hidden");
+    const resolver = resolveModalUniversal;
+    resolveModalUniversal = null;
+    if (resolver) resolver(valorRetorno);
+    focarEAN();
+}
+
+function confirmarModalUniversal() {
+    const val = document.getElementById("modal-univ-campo").value;
+    fecharModalUniversal(val);
+}
+
+// Máscara automática enquanto digita
+document.getElementById("modal-univ-campo").addEventListener("input", function () {
+    if (tipoMascaraModalAtual === "moeda" || tipoMascaraModalAtual === "percentual") {
+        const digits = this.value.replace(/\D/g, "") || "0";
+        const num = parseInt(digits, 10) / 100;
+        this.value = num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    } else if (tipoMascaraModalAtual === "qtde") {
+        const digits = this.value.replace(/\D/g, "") || "0";
+        const num = parseInt(digits, 10) / 1000;
+        this.value = num.toLocaleString("pt-BR", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+    } else if (tipoMascaraModalAtual === "cpfcnpj") {
+        let v = this.value.replace(/\D/g, "").slice(0, 14);
+        if (v.length <= 11) {
+            v = v.replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+        } else {
+            v = v.replace(/^(\d{2})(\d)/, "$1.$2").replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3").replace(/\.(\d{3})(\d)/, ".$1/$2").replace(/(\d{4})(\d)/, "$1-$2");
+        }
+        this.value = v;
+    } else if (tipoMascaraModalAtual === "inteiro") {
+        this.value = this.value.replace(/\D/g, "");
+    }
+});
+
+document.getElementById("modal-univ-campo").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); confirmarModalUniversal(); }
+    if (e.key === "Escape") { e.preventDefault(); fecharModalUniversal(null); }
+});
+
+// ============================================================================
+// FUNÇÕES DO PDV USANDO O MODAL UNIVERSAL (SEM prompt())
+// ============================================================================
+async function verificarPermissaoGerente() {
+    const grupo = (operadorAtivo?.grupo_geral || "").trim().toUpperCase();
+    if (grupo === "GERENTE" || grupo === "ADMIN" || grupo === "SUPORTE") {
+        return operadorAtivo.usua_nome;
+    }
+    const senha = await pedirDadoModal({
+        titulo: "AUTORIZAÇÃO DE SUPERVISOR / GERENTE",
+        label: "Digite a senha de autorização:",
+        tipo: "senha",
+        dica: "Operação restrita ao nível Gerente ou Administrador."
+    });
+    return senha && senha.trim() !== "" ? "GERENTE_AUTORIZADO" : null;
+}
+
+async function alterarQuantidade() {
+    if (!vendaIniciada) iniciarVenda();
+    if (operadorAtivo && operadorAtivo.alterar_qtde === "N") {
+        const aut = await verificarPermissaoGerente();
+        if (!aut) return;
+    }
+    const res = await pedirDadoModal({
+        titulo: "ALTERAR QUANTIDADE [F2]",
+        label: "Quantidade do próximo item:",
+        valorInicial: qtdeAtual.toLocaleString("pt-BR", { minimumFractionDigits: 3 }),
+        tipo: "qtde"
+    });
+    if (res === null) return;
+    const parsed = parseFloat(res.replace(/\./g, "").replace(",", "."));
+    if (isNaN(parsed) || parsed <= 0) return alert("Quantidade inválida!");
+    qtdeAtual = parsed;
+    document.getElementById("input-quantidade").value = qtdeAtual.toFixed(2);
+}
+
+async function aplicarAcrescimo() {
+    if (!vendaIniciada) iniciarVenda();
+    if (totalBrutoCupom > 0) return alert("O % de Acréscimo só pode ser informado antes de lançar itens!");
+    const aut = await verificarPermissaoGerente();
+    if (!aut) return;
+
+    const res = await pedirDadoModal({
+        titulo: "ACRÉSCIMO PERCENTUAL [F12]",
+        label: "Percentual de acréscimo (%):",
+        valorInicial: formatarMoeda(percAcrescimo),
+        tipo: "percentual"
+    });
+    if (res === null) return;
+    percAcrescimo = parseFloat(res.replace(/\./g, "").replace(",", ".")) || 0;
+    document.getElementById("lbl-perc-acrescimo").innerText = percAcrescimo > 0 ? `${percAcrescimo}%` : "";
+}
+
+async function aplicarDesconto() {
+    if (!vendaIniciada || totalBrutoCupom <= 0) return alert("Não há itens para aplicar desconto.");
+    const aut = await verificarPermissaoGerente();
+    if (!aut) return;
+
+    const res = await pedirDadoModal({
+        titulo: "DESCONTO NO CUPOM [F11]",
+        label: "Valor do desconto (R$):",
+        valorInicial: formatarMoeda(totalDesconto),
+        tipo: "moeda",
+        dica: `Máximo permitido (50%): R$ ${formatarMoeda(totalBrutoCupom * 0.5)}`
+    });
+    if (res === null) return;
+    const desc = parseFloat(res.replace(/\./g, "").replace(",", ".")) || 0;
+    if (desc > totalBrutoCupom * 0.5) return alert("Desconto não pode ultrapassar 50% do total!");
+    totalDesconto = desc;
+    atualizarVisoresTotais();
+}
+
+async function informarCpfNota() {
+    const doc = await pedirDadoModal({
+        titulo: "IDENTIFICAÇÃO DO CONSUMIDOR [F4]",
+        label: "CPF ou CNPJ do cliente:",
+        valorInicial: cpfCnpjClienteAtual || "",
+        tipo: "cpfcnpj",
+        dica: "Deixe em branco e pressione ENTER para remover."
+    });
+    if (doc === null) return;
+
+    const docLimpo = doc.replace(/\D/g, "");
+    if (docLimpo === "") {
+        cpfCnpjClienteAtual = null;
+        nomeClienteAtual = null;
+        document.getElementById("lbl-doc-cliente").innerText = "Documento: Não informado";
+        return;
+    }
+    if (docLimpo.length !== 11 && docLimpo.length !== 14) {
+        return alert("Documento inválido! Informe 11 dígitos (CPF) ou 14 dígitos (CNPJ).");
+    }
+
+    cpfCnpjClienteAtual = docLimpo;
+    if (docLimpo.length === 14) {
+        const razao = await pedirDadoModal({
+            titulo: "RAZÃO SOCIAL DO DESTINATÁRIO",
+            label: "Nome / Razão Social (obrigatório para CNPJ):",
+            valorInicial: nomeClienteAtual || "",
+            tipo: "texto"
+        });
+        nomeClienteAtual = (razao || "CONSUMIDOR").trim().toUpperCase();
+    } else {
+        nomeClienteAtual = "CONSUMIDOR";
+    }
+    document.getElementById("lbl-doc-cliente").innerText = `Documento: ${doc} - ${nomeClienteAtual}`;
+}
+
+async function cancelarItemEspecifico() {
+    if (carrinhoLocal.length === 0) return alert("Não existe nenhum item digitado para esta venda!");
+    const numStr = await pedirDadoModal({
+        titulo: "CANCELAR ITEM [F5]",
+        label: "Digite o número do ITEM (ex: 1 ou 001):",
+        tipo: "inteiro",
+        dica: `Itens lançados: 1 até ${carrinhoLocal.length}`
+    });
+    if (!numStr) return;
+    const idx = parseInt(numStr, 10) - 1;
+    if (isNaN(idx) || idx < 0 || idx >= carrinhoLocal.length) return alert("Número de item inválido.");
+    if (confirm(`Confirma o Cancelamento do Item [ ${String(idx + 1).padStart(3, "0")} ] ?`)) {
+        carrinhoLocal.splice(idx, 1);
+        atualizarCupomNaTela();
     }
 }
