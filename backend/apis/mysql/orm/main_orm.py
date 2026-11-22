@@ -21,6 +21,12 @@ from backend.suporte.pdv_emissor import emitir_nota
 from backend.suporte.gerador_xml import gerar_xml_nfe
 from backend.apis.usuario_routes import usuario_router
 from backend.apis.caixa_routes import caixa_router
+from gerador.gerar_todos_model import gerador_router
+from gerador.gerador_crud_routes import gerador_crud_router
+from backend.apis.produto_routes import produtos_router
+from backend.apis.importa_nfe_router import importa_nfe_router
+from backend.apis.usuario_crud_routes import usuarios_router
+
 app = FastAPI(
     title="API Central do Gerente Fiscal - PDV Espelho XML 4.00 + IBS/CBS",
     version="4.0"
@@ -357,8 +363,12 @@ def fechar_caixa(caixa_id: int, dados: FechamentoCaixaInput, session: Session = 
 
 app.include_router(usuario_router)
 app.include_router(caixa_router)
-# Serve o frontend (versao3) na raiz http://localhost:8000
-#caminho_frontend = os.path.join("frontend", "versao3")
+app.include_router(gerador_router)
+app.include_router(produtos_router)
+app.include_router(importa_nfe_router)
+app.include_router(gerador_crud_router)
+app.include_router(usuarios_router)
+
 caminho_frontend = os.path.join("frontend")
 if os.path.exists(caminho_frontend):
     app.mount("/", StaticFiles(directory=caminho_frontend, html=True), name="frontend")

@@ -97,13 +97,23 @@ function injetarDrawerRetaguarda() {
         </div>
         <div style="font-size:12px;line-height:2;">
             <div style="color:#38bdf8;font-weight:bold;margin-top:6px;">📁 Cadastros</div>
-            <div style="padding-left:10px;color:#cbd5e1;">• Clientes / Destinatários<br>• Produtos & Tributação<br>• Cod. Fiscal Operação<br>• Formas de Pagto<br>• Cidades (IBGE)</div>
+            <div style="padding-left:10px;color:#cbd5e1;">• Clientes / Destinatários<br>• Cod. Fiscal Operação<br>• Formas de Pagto<br>• Cidades (IBGE)</div>
+            <div onclick="window.retProdutos.abrirLista()" style="cursor:pointer; text-decoration:underline;">
+            • Produtos &amp; Tributação
+            </div>
             <div style="color:#38bdf8;font-weight:bold;margin-top:10px;">🔄 Movimentações</div>
-            <div style="padding-left:10px;color:#cbd5e1;">• Cancelamento de NF-e/NFC-e<br>• Devolução Total da NFe<br>• Importa NFe de Compra</div>
+            <div style="padding-left:10px;color:#cbd5e1;">• Cancelamento de NF-e/NFC-e<br>• Devolução Total da NFe<br></div>
+            <div onclick="window.retImportaNFe.abrir()" style="cursor:pointer; text-decoration:underline;">
+                • Importa NFe de Compra
+            </div>
             <div style="color:#38bdf8;font-weight:bold;margin-top:10px;">📊 Relatórios</div>
             <div style="padding-left:10px;color:#cbd5e1;">• Movimento no Período<br>• Recebimento no Período</div>
             <div style="color:#38bdf8;font-weight:bold;margin-top:10px;">⚙ Administração</div>
-            <div style="padding-left:10px;color:#cbd5e1;">• Dados do Emitente<br>• Usuários<br>• Posição Caixa<br>• Numeração NF-e/NFC-e</div>
+            <div style="padding-left:10px;color:#cbd5e1;">• Dados do Emitente<br></div>
+            <div onclick="window.retUsuarios.abrirLista()" style="cursor:pointer; text-decoration:underline;">
+                • Usuários
+            </div>
+            <div style="padding-left:10px;color:#cbd5e1;">• Posição Caixa<br>• Numeração NF-e/NFC-e</div>            
         </div>
     </div>`;
     document.body.insertAdjacentHTML("beforeend", htmlDrawer);

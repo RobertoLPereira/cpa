@@ -9,6 +9,9 @@ import { inicializarModalPagamento, abrirModalPagamento, fecharModalPagamento, a
 import { inicializarModalReimpressao, abrirModalReimpressao, fecharModalReimpressao, carregarNotas, selecionarLinhaReimp, executarReimpressao, transmitirPendente } from "./ui/modal-reimp.js";
 import { iniciarVenda, registrarItem, alterarQuantidade, aplicarAcrescimo, aplicarDesconto, informarCpfNota, cancelarItem, cancelarVenda, limparVendaCompleta } from "./operacoes/venda.js";
 import { toggleMenuAuxiliar, executarSuprimento, executarSangria, emitirLeituraX } from "./operacoes/gaveta.js";
+import "./retaguarda/produtos.js";
+import "./retaguarda/importa-nfe.js";
+import "./retaguarda/usuarios.js";
 
 // Expõe ações para os botões onclick do HTML
 window.pdvUI = {

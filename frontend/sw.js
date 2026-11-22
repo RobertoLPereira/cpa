@@ -1,4 +1,4 @@
-const CACHE_NAME = "pdv-modular-v1";
+const CACHE_NAME = "pdv-modular-v8";
 // Adicionamos o icon.png na lista de recursos locais que o navegador vai guardar em cache
 const ASSETS_TO_CACHE = [
     "./",
@@ -19,6 +19,9 @@ const ASSETS_TO_CACHE = [
     "./js/ui/modal-reimp.js",
     "./js/operacoes/venda.js",
     "./js/operacoes/gaveta.js",
+    "./js/retaguarda/produtos.js",
+    "./js/retaguarda/importa-nfe.js",
+    "./js/retaguarda/usuarios.js",
     "manifest.json",
     "icone.svg"
 ];
