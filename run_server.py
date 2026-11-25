@@ -27,7 +27,7 @@ env_path = os.path.join(BASE_DIR, ".env")
 if os.path.exists(env_path):
     load_dotenv(env_path)
 
-from backend.apis.mysql.orm.main_orm import app
+from backend.apis.main import app
 
 def abrir_navegador():
     time.sleep(1.5)

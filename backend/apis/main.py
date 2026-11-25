@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 from decimal import Decimal
 from typing import List, Optional
+import webbrowser
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -372,7 +373,11 @@ app.include_router(usuarios_router)
 caminho_frontend = os.path.join("frontend")
 if os.path.exists(caminho_frontend):
     app.mount("/", StaticFiles(directory=caminho_frontend, html=True), name="frontend")
+
+def abrir_navegador():
+    webbrowser.open("http://localhost:8000")
+
 if __name__ == "__main__":
     # Inicia o servidor local na porta 8000
-    uvicorn.run("backend.apis.mysql.orm.main_orm:app", host="0.0.0.0", port=8000, reload=True)
-#python -m uvicorn backend.apis.mysql.orm.main_orm
+    uvicorn.run("backend.apis.main:app", host="0.0.0.0", port=8000, reload=True)
+#python -m uvicorn backend.apis.main

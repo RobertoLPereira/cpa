@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FRENTE DE CAIXA - NFC-e</title>
+  <link rel="stylesheet" href="./css/temas.css" />
+  <link rel="stylesheet" href="./css/base.css" />
+  <link rel="stylesheet" href="./css/layout.css" />
+  <link rel="stylesheet" href="./css/modais.css" />
+</head>
+<body class="tema-verde-amarelo">
+
+  <!-- =====================================================================
+       1. INTERFACE FRENTE DE CAIXA (Visível SOMENTE para grupo CAIXA)
+       ===================================================================== -->
+  <div id="container-pdv" style="flex-direction: column; justify-content: space-between; height: 100%;">
+    <header>
+      <div class="bevel-panel header-esq">
+        <div class="titulo-caixa">
+          <h1>FRENTE DE CAIXA</h1>
+          <span id="badge-versao" class="badge-versao">Versão: 4.0 Web</span>
+        </div>
+        <div class="status-sefaz-box">
+          <div id="lbl-ambiente">HOMOLOGAÇÃO</div>
+          <div id="lbl-status-sefaz">107 - Serviço em Operação</div>
+        </div>
+      </div>
+      <div class="bevel-panel header-dir">
+        <div id="header-operador-badge">Operador: ---</div>
+        <div id="lbl-data">Data: --/--/----</div>
+        <div id="header-terminal-badge">Caixa: CAIXA-01</div>
+        <div id="lbl-hora">Hora: 00:00:00</div>
+      </div>
+    </header>
+
+    <main id="aba-caixa">
+      <section class="col-esquerda">
+        <div>
+          <div class="linha-ean">
+            <label id="lbl-ean" for="input-scanner">Cód. EAN / Produto:</label>
+            <input id="input-scanner" type="text" autocomplete="off" />
+            <button onclick="pdvUI.abrirBusca()" id="btn-procura-produto" class="btn-pdv" style="height:34px;">[F1] PROCURA PRODUTO</button>
+          </div>
+
+          <div class="grupo-descricao">
+            <label>Descrição do Produto:</label>
+            <input id="txt-descricao" type="text" readonly value="CAIXA LIVRE" class="campo-amarelo" />
+          </div>
+
+          <div class="grid-produto-foto">
+            <div class="campos-valores">
+              <div class="linha-campo">
+                <label>Quantidade:</label>
+                <input id="input-quantidade" type="text" value="1.00" readonly class="campo-qtde" />
+                <input id="txt-unidade" type="text" value="UN" readonly class="campo-qtde" />
+              </div>
+              <div class="linha-campo">
+                <button onclick="pdvUI.alterarQuantidade()" id="btn-altera-qtde" class="btn-pdv" style="width:195px;">[F2] Altera Qtde</button>
+              </div>
+              <div class="linha-campo" style="margin-top:6px;">
+                <label>Preço Unitário:</label>
+                <input id="txt-preco-unit" type="text" value="0,00" readonly class="campo-amarelo input-valor" />
+              </div>
+              <div class="linha-campo">
+                <label>Total do Produto:</label>
+                <input id="txt-total-prod" type="text" value="0,00" readonly class="campo-amarelo input-valor" />
+              </div>
+              <div class="linha-campo" style="margin-top:8px;">
+                <label>Número Pedido:</label>
+                <input id="txt-num-pedido" type="text" value="000001" readonly class="campo-amarelo input-valor" />
+              </div>
+            </div>
+
+            <div class="bevel-panel quadro-foto">
+              <img id="img-produto" src="nfe_400.jpg" alt="Logo Emitente"
+                   onerror="this.classList.add('hidden'); document.getElementById('placeholder-logo').classList.remove('hidden');" />
+              <div id="placeholder-logo" class="hidden">LOGO DO EMITENTE<br>SEM FOTO</div>
+            </div>
+          </div>
+
+          <div class="linha-acrescimo-desconto">
+            <div class="box-acrescimo">
+              <span id="lbl-perc-acrescimo"></span>
+              <button onclick="pdvUI.aplicarAcrescimo()" id="btn-acrescimo" class="btn-pdv btn-grande">[F12] Acréscimo (%)</button>
+            </div>
+            <button onclick="pdvUI.aplicarDesconto()" id="btn-desconto" class="btn-pdv btn-grande">[F11] Desconto (Vlr)</button>
+          </div>
+
+          <div id="lbl-doc-cliente">Documento: Não informado</div>
+        </div>
+
+        <div id="painel-menu-aux" class="bevel-panel hidden">
+          <button onclick="pdvUI.executarSuprimento()" class="btn-pdv">[F1] SUPRIMENTO</button>
+          <button onclick="pdvUI.executarSangria()" class="btn-pdv">[F2] SANGRIA</button>
+          <button onclick="pdvUI.abrirReimpressao()" class="btn-pdv">[F3] Reimpressão</button>
+          <button onclick="pdvUI.abrirCalculadora()" class="btn-pdv">[F4] CALCULADORA</button>
+          <button onclick="pdvUI.abrirCaixa()" class="btn-pdv">[F5] Abre Caixa</button>
+          <button onclick="pdvUI.emitirLeituraX()" class="btn-pdv">[F6] Leitura X</button>
+          <button disabled class="btn-pdv" style="visibility:hidden;"></button>
+          <button onclick="pdvUI.toggleMenuAuxiliar(false)" class="btn-pdv" style="color:#cc0000;">[F7] FECHAR</button>
+        </div>
+      </section>
+
+      <section class="col-direita">
+        <div class="status-venda-topo"><span id="lbl-status-venda">Venda Aberta</span></div>
+        <div id="bobina-cupom" class="bobina-papel">*---------------- Venda Aberta ----------------*
+ITEM  QTDE    UNIT    TOTAL DESCRIÇÃO
+------------------------------------------------
+        </div>
+        <div class="totais-box">
+          <div class="linha-total"><label>Desconto:</label><input id="visor-desconto" type="text" value="0,00" readonly class="campo-amarelo" /></div>
+          <div class="linha-total"><label>Total :</label><input id="visor-total" type="text" value="0,00" readonly class="campo-amarelo" /></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="bevel-panel">
+      <button onclick="pdvUI.iniciarVenda()" id="btn-iniciar" class="btn-pdv">[ENTER] INICIAR VENDA</button>
+      <button onclick="pdvUI.informarCpfNota()" id="btn-cpf" class="btn-pdv">[F4] C P F / C N P J</button>
+      <button onclick="pdvUI.cancelarItem()" id="btn-canc-item" class="btn-pdv">[F5] CANCELA ITEM</button>
+      <button onclick="pdvUI.cancelarVenda()" id="btn-canc-venda" class="btn-pdv">[F6] CANCELA VDA</button>
+      <button onclick="pdvUI.toggleMenuAuxiliar()" id="btn-menu" class="btn-pdv">[F7] Menu</button>
+      <button onclick="pdvUI.abrirPagamento()" id="btn-finalizar" class="btn-pdv">[F8] FINALIZAR</button>
+      <button onclick="pdvUI.focarEAN()" id="btn-ean" class="btn-pdv">[F9] EAN</button>
+      <button onclick="fazerLogoff()" id="btn-sair" class="btn-pdv">[F10] SAIR</button>
+    </footer>
+  </div>
+  <!-- =====================================================================
+       2. INTERFACE RETAGUARDA / ADMINISTRAÇÃO (Gerente, Admin e Suporte)
+       ===================================================================== -->
+  <div id="container-retaguarda" class="hidden" style="flex-direction: column; height: 100%; gap: 10px;">
+    <div class="bevel-panel" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 14px;">
+      <div>
+        <h2 style="font-size: 20px; font-weight: 900; color: var(--cor-primaria); margin: 0;">RETAGUARDA &amp; ADMINISTRAÇÃO FISCAL</h2>
+        <span id="retaguarda-operador-info" style="font-size: 12px; font-weight: bold; color: #334155;">Usuário: ---</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <button onclick="toggleDrawerRetaguarda()" class="btn-pdv" style="height: 36px; padding: 0 14px; font-size: 12px;">
+          ☰ Alternar Menu Lateral
+        </button>
+        <button onclick="fazerLogoff()" class="btn-pdv" style="height: 36px; padding: 0 18px; font-size: 12px; color: #cc0000;">
+          [F10] SAIR
+        </button>
+      </div>
+    </div>
+
+    <div id="view-modulo-retaguarda" class="bevel-panel" style="flex: 1; padding: 16px; overflow-y: auto; background: #ffffff;">
+      <h3 style="color: var(--cor-secundaria); margin-bottom: 8px;">Bem-vindo à Retaguarda</h3>
+      <p style="font-size: 13px; color: #475569;">Selecione uma opção no <strong>Menu Retaguarda</strong> à esquerda para gerenciar cadastros, movimentações fiscais ou relatórios.</p>
+    </div>
+  </div>
+
+  <!-- MODAL UNIVERSAL (Substitui prompt) -->
+  <div id="modal-input-universal" class="modal-overlay hidden">
+    <div class="modal-pgto-janela" style="width: 420px;">
+      <div class="modal-titulo-bar">
+        <span id="modal-univ-titulo">ENTRADA DE DADOS</span>
+        <button onclick="pdvUI.fecharUniversal(null)" class="btn-pdv" style="padding: 1px 6px;">X</button>
+      </div>
+      <div style="padding: 10px 6px; display: flex; flex-direction: column; gap: 10px;">
+        <label id="modal-univ-label" for="modal-univ-campo" style="font-size: 13px; font-weight: bold; color: #0000ff;">Informe o valor:</label>
+        <input id="modal-univ-campo" type="text" autocomplete="off" class="pgto-input" style="text-align: center;" />
+        <span id="modal-univ-dica" style="font-size: 11px; color: #444; font-weight: bold;"></span>
+      </div>
+      <div class="modal-rodape" style="margin-top: 8px;">
+        <span>[ENTER] Confirmar | [ESC] Cancelar</span>
+        <div style="display: flex; gap: 8px;">
+          <button onclick="pdvUI.confirmarUniversal()" class="btn-pdv" style="height: 34px; width: 100px; color: #006600;">[ENTER] OK</button>
+          <button onclick="pdvUI.fecharUniversal(null)" class="btn-pdv" style="height: 34px; width: 90px; color: #cc0000;">[ESC] Cancelar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL [F1] PROCURA PRODUTO -->
+  <div id="modal-procura-produto" class="modal-overlay hidden">
+    <div class="modal-janela">
+      <div class="modal-titulo-bar">
+        <span>LOCALIZAR PRODUTO [F1]</span>
+        <button onclick="pdvUI.fecharBusca()" class="btn-pdv" style="padding: 1px 6px;">X</button>
+      </div>
+      <div class="modal-busca-box">
+        <label for="input-busca-produto">Descrição / EAN:</label>
+        <input id="input-busca-produto" type="text" autocomplete="off" placeholder="DIGITE O NOME OU CÓDIGO..." />
+        <button onclick="pdvUI.consultarProdutos()" class="btn-pdv" style="height: 32px;">Pesquisar</button>
+      </div>
+      <div class="modal-tabela-container">
+        <table class="tabela-produtos">
+          <thead><tr><th style="width:75px;">Código</th><th style="width:130px;">EAN / Barras</th><th>Descrição</th><th style="width:50px; text-align:center;">Unid</th><th style="width:100px; text-align:right;">Preço (R$)</th></tr></thead>
+          <tbody id="tbody-produtos-busca"></tbody>
+        </table>
+      </div>
+      <div class="modal-rodape">
+        <span>[↑ / ↓] Navegar | [ENTER] Confirmar | [ESC] Fechar</span>
+        <div style="display: flex; gap: 8px;">
+          <button onclick="pdvUI.confirmarProdutoBusca()" class="btn-pdv" style="height: 32px; width: 110px;">[ENTER] Selecionar</button>
+          <button onclick="pdvUI.fecharBusca()" class="btn-pdv" style="height: 32px; width: 90px; color: #cc0000;">[ESC] Cancelar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- MODAL [F8] EFETUA PAGAMENTO -->
+  <div id="modal-efetua-pagamento" class="modal-overlay hidden">
+    <div class="modal-pgto-janela">
+      <div class="modal-titulo-bar">
+        <span>FINALIZAÇÃO DA VENDA - EFETUAR PAGAMENTO [F8]</span>
+        <button onclick="pdvUI.fecharPagamento()" class="btn-pdv" style="padding: 1px 6px;">X</button>
+      </div>
+      <div class="pgto-grid">
+        <div class="pgto-form-box">
+          <div>
+            <label for="select-forma-pgto">Forma de Pagamento (tPag):</label>
+            <select id="select-forma-pgto" class="pgto-select">
+              <option value="01">01 - DINHEIRO</option>
+              <option value="03">03 - CARTÃO DE CRÉDITO</option>
+              <option value="04">04 - CARTÃO DE DÉBITO</option>
+              <option value="17">17 - PIX</option>
+              <option value="02">02 - CHEQUE</option>
+              <option value="05">05 - CRÉDITO LOJA / CREDIÁRIO</option>
+              <option value="99">99 - OUTROS</option>
+            </select>
+          </div>
+          <div>
+            <label for="input-valor-pgto">Valor a Lançar (R$):</label>
+            <input id="input-valor-pgto" type="text" autocomplete="off" class="pgto-input" />
+          </div>
+          <button onclick="pdvUI.adicionarPagamento()" class="btn-pdv" style="height: 38px; font-size: 13px;">[ENTER] Lançar Pagamento</button>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div class="pgto-resumo-cards">
+            <div class="pgto-card-valor"><span>TOTAL A PAGAR:</span><strong id="pgto-total-cupom">0,00</strong></div>
+            <div class="pgto-card-valor"><span>TOTAL PAGO:</span><strong id="pgto-total-pago" style="color:#16a34a;">0,00</strong></div>
+            <div class="pgto-card-valor"><span>RESTANTE:</span><strong id="pgto-restante" style="color:#cc0000;">0,00</strong></div>
+            <div class="pgto-card-valor"><span>TROCO:</span><strong id="pgto-troco" style="color:#000099;">0,00</strong></div>
+          </div>
+          <div class="pgto-lista-box">
+            <table class="tabela-produtos">
+              <thead><tr><th>Forma de Pagamento</th><th style="text-align:right;">Valor (R$)</th><th style="width:36px; text-align:center;">Ação</th></tr></thead>
+              <tbody id="tbody-pagamentos-lancados"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="modal-rodape" style="margin-top: 12px;">
+        <span>[ENTER] Lança / Confirma | [ESC] Cancelar</span>
+        <div style="display: flex; gap: 8px;">
+          <button id="btn-confirmar-pgto-final" onclick="pdvUI.confirmarEncerramentoVenda()" class="btn-pdv" style="height: 38px; padding: 0 16px; font-size: 13px; color: #006600;" disabled>[F8] CONFIRMAR E EMITIR NFC-e</button>
+          <button onclick="pdvUI.fecharPagamento()" class="btn-pdv" style="height: 38px; width: 100px; color: #cc0000;">[ESC] Desistir</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL [F3] REIMPRESSÃO -->
+  <div id="modal-reimpressao" class="modal-overlay hidden">
+    <div class="modal-janela" style="width: 860px; height: 490px;">
+      <div class="modal-titulo-bar">
+        <span>REIMPRESSÃO DE CUPOM / NOTAS PENDENTES [F3]</span>
+        <button onclick="pdvUI.fecharReimpressao()" class="btn-pdv" style="padding: 1px 6px;">X</button>
+      </div>
+      <div class="modal-busca-box" style="justify-content: space-between;">
+        <div style="display: flex; gap: 6px;">
+          <button onclick="pdvUI.carregarNotas('TODAS')" class="btn-pdv">Todas</button>
+          <button onclick="pdvUI.carregarNotas('AUTORIZADAS')" class="btn-pdv">Autorizadas</button>
+          <button onclick="pdvUI.carregarNotas('PENDENTES')" class="btn-pdv" style="color: #cc0000;">Pendentes / Contingência</button>
+        </div>
+        <span id="lbl-qtd-notas-reimp" style="font-size: 11px; font-weight: bold; color: #000080;">0 registros</span>
+      </div>
+      <div class="modal-tabela-container">
+        <table class="tabela-produtos">
+          <thead><tr><th style="width:75px;">Nº Nota</th><th style="width:45px;">Série</th><th style="width:45px;">Mod</th><th style="width:135px;">Data / Hora</th><th>Destinatário</th><th style="width:95px; text-align:right;">Total (R$)</th><th style="width:115px; text-align:center;">Status SEFAZ</th></tr></thead>
+          <tbody id="tbody-notas-reimpressao"></tbody>
+        </table>
+      </div>
+      <div class="modal-rodape">
+        <span>[↑ / ↓] Navegar | [ENTER] Bobina | [ESC] Fechar</span>
+        <div style="display: flex; gap: 6px;">
+          <button id="btn-transmitir-pendente" onclick="pdvUI.transmitirPendente()" class="btn-pdv" style="height: 34px; padding: 0 10px; color: #b45309;" disabled>Transmitir Pendente</button>
+          <button onclick="pdvUI.executarReimpressao(true, false)" class="btn-pdv" style="height: 34px; padding: 0 10px;">Baixar XML</button>
+          <button onclick="pdvUI.executarReimpressao(false, true)" class="btn-pdv" style="height: 34px; padding: 0 12px; color: #000080;">Imprimir 80mm</button>
+          <button onclick="pdvUI.executarReimpressao(false, false)" class="btn-pdv" style="height: 34px; padding: 0 12px; color: #006600;">[ENTER] Bobina</button>
+          <button onclick="pdvUI.fecharReimpressao()" class="btn-pdv" style="height: 34px; width: 80px; color: #cc0000;">[ESC] Fechar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="auth_retaguarda.js"></script>
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
